@@ -34,9 +34,8 @@ jobs:
       - name: Build Application
         run: npm run build
         env:
-          # Inject any Vite environment variables here if needed
-          # VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
-          VITE_AWS_COGNITO_CLIENT_ID: ${{ secrets.VITE_AWS_COGNITO_CLIENT_ID }}
+          VITE_COGNITO_CLIENT_ID: ${{ secrets.VITE_COGNITO_CLIENT_ID }}
+          VITE_COGNITO_DOMAIN: ${{ secrets.VITE_COGNITO_DOMAIN }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
