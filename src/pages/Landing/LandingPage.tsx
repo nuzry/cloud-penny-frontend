@@ -77,6 +77,29 @@ export const LandingPage: React.FC = () => {
 
   const displayError = urlError || (authErrorContext ? { error: 'Login Failed', description: authErrorContext } : null);
 
+  if (isLoading) {
+    return (
+      <Flex
+        align="center"
+        justify="center"
+        style={{
+          minHeight: '100vh',
+          width: '100%',
+          backgroundColor: token.colorBgLayout,
+        }}
+      >
+        <Flex vertical align="center" justify="center">
+          <Spin size="large" />
+          <Text type="secondary" style={{ marginTop: token.marginMD }}>Authenticating...</Text>
+        </Flex>
+      </Flex>
+    );
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
     <Flex
       align="center"
@@ -129,13 +152,7 @@ export const LandingPage: React.FC = () => {
             </Paragraph>
           </Flex>
 
-          {isLoading ? (
-            <Flex vertical align="center" justify="center" style={{ padding: token.paddingXL }}>
-              <Spin size="large" />
-              <Text type="secondary" style={{ marginTop: token.marginMD }}>Authenticating...</Text>
-            </Flex>
-          ) : (
-            <>
+
               {/* Errors */}
               {displayError && (
                 <Flex vertical gap={token.marginSM} style={{ width: '100%' }}>
@@ -161,10 +178,7 @@ export const LandingPage: React.FC = () => {
                 </Flex>
               )}
 
-              {/* If authenticated but we are still here (maybe during re-render before redirect), show loading */}
-              {isAuthenticated && (
-                <Navigate to="/dashboard" replace />
-              )}
+
 
               {/* Default State: 3 Key Features & Login Button */}
               {!isAuthenticated && !displayError && (
@@ -218,8 +232,6 @@ export const LandingPage: React.FC = () => {
                   </Button>
                 </>
               )}
-            </>
-          )}
         </Flex>
       </Card>
     </Flex>
