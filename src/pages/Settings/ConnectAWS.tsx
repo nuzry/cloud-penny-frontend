@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Steps, Button, Typography, Card, theme, Space, Alert, message, Input } from 'antd';
-import { CloudServerOutlined, LockOutlined, CheckCircleOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { CloudServerOutlined, LockOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import apiClient from '../../lib/apiClient';
 import { userService } from '../../api/userService';
 import ConfirmModal from '../../components/ui/ConfirmModal';

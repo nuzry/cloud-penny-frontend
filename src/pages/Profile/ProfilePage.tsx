@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Typography, Alert, Button, theme, Space, Divider, Row, Col, Statistic } from 'antd';
+import { Card, Typography, Alert, Button, theme, Space, Divider, Row, Col } from 'antd';
 import { CloudServerOutlined, IdcardOutlined, MailOutlined, SafetyCertificateOutlined, CalendarOutlined, CheckCircleOutlined, ExclamationCircleOutlined, LockOutlined } from '@ant-design/icons';
 import { userService } from '../../api/userService';
 import type { ClientProfile } from '../../api/userService';
