@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Button, theme, Flex, Typography, Dropdown, Avatar } from 'antd';
+import { Layout, Button, theme, Flex, Typography, Dropdown, Avatar } from 'antd';
 import {
   BarChartOutlined,
   CloudOutlined,
@@ -10,6 +10,9 @@ import {
   MenuUnfoldOutlined,
   SunOutlined,
   MoonOutlined,
+  CloudDownloadOutlined,
+  PhoneOutlined,
+  AlertOutlined
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../features/auth';
@@ -33,6 +36,16 @@ export const AppLayout: React.FC = () => {
       label: 'Dashboard',
     },
     {
+      key: '/export',
+      icon: <CloudDownloadOutlined />,
+      label: 'Export',
+    },
+    {
+      key: '/alerts',
+      icon: <AlertOutlined />,
+      label: 'Alerts',
+    },
+    {
       key: '/settings',
       icon: <SettingOutlined />,
       label: 'Settings',
@@ -40,7 +53,12 @@ export const AppLayout: React.FC = () => {
     {
       key: '/profile',
       icon: <UserOutlined />,
-      label: 'My Profile',
+      label: 'Profile',
+    },
+    {
+      key: '/contact',
+      icon: <PhoneOutlined />,
+      label: 'Contact',
     },
   ];
 
@@ -57,8 +75,11 @@ export const AppLayout: React.FC = () => {
   const getPageTitle = (path: string) => {
     switch (path) {
       case '/dashboard': return 'Dashboard';
+      case '/export': return 'Export';
+      case '/alerts': return 'Alerts';
       case '/settings': return 'Settings';
-      case '/profile': return 'My Profile';
+      case '/profile': return 'Profile';
+      case '/contact': return 'Contact';
       default: return '';
     }
   };
@@ -91,14 +112,78 @@ export const AppLayout: React.FC = () => {
             </Text>
           )}
         </Flex>
-        <Menu
-          theme={mode}
-          mode="inline"
-          selectedKeys={[location.pathname]}
-          items={menuItems}
-          onClick={({ key }) => navigate(key)}
-          style={{ borderRight: 0, marginTop: token.marginSM }}
-        />
+
+        <Flex vertical gap={4} style={{ padding: collapsed ? '12px 8px' : '12px 16px' }}>
+          {menuItems.map(item => {
+            const isSelected = location.pathname.startsWith(item.key);
+            return (
+              <div
+                key={item.key}
+                onClick={() => navigate(item.key)}
+                style={{
+                  position: 'relative',
+                  padding: collapsed ? '10px 0' : '10px 16px',
+                  justifyContent: collapsed ? 'center' : 'flex-start',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  backgroundColor: isSelected ? token.colorFillSecondary : 'transparent',
+                  transition: 'background-color 0.2s',
+                  userSelect: 'none',
+                  whiteSpace: 'nowrap'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected) e.currentTarget.style.backgroundColor = token.colorFillTertiary;
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+                title={collapsed ? item.label : undefined}
+              >
+                {/* Active Indicator Bar */}
+                {isSelected && (
+                  <div 
+                    style={{ 
+                      position: 'absolute', 
+                      left: 0, 
+                      top: '50%', 
+                      transform: 'translateY(-50%)', 
+                      width: 4, 
+                      height: '60%', 
+                      backgroundColor: token.colorPrimary, 
+                      borderRadius: 4 
+                    }} 
+                  />
+                )}
+                
+                {/* Icon */}
+                <div style={{ 
+                  color: isSelected ? token.colorText : token.colorTextSecondary,
+                  fontSize: 16,
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  {item.icon}
+                </div>
+
+                {/* Label */}
+                {!collapsed && (
+                  <Typography.Text 
+                    style={{ 
+                      color: isSelected ? token.colorText : token.colorTextSecondary,
+                      fontWeight: 500,
+                      fontSize: 14
+                    }}
+                  >
+                    {item.label}
+                  </Typography.Text>
+                )}
+              </div>
+            );
+          })}
+        </Flex>
       </Sider>
       
       <Layout>
