@@ -10,15 +10,11 @@ export const Dashboard: React.FC = () => {
   const { token } = theme.useToken();
 
   return (
-    <Flex vertical gap={token.marginLG}>
-      <Flex vertical>
-        <Title level={2} style={{ margin: 0 }}>Dashboard</Title>
-        <Text type="secondary">Welcome back, {user?.email || 'User'}</Text>
-      </Flex>
-
-      <Card bordered={false} style={{ minHeight: '60vh', boxShadow: token.boxShadowTertiary }}>
-        <Flex vertical align="center" justify="center" style={{ height: '100%', minHeight: 400 }} gap="large">
-          <Typography.Title level={3} style={{ color: token.colorTextSecondary }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+      <Card bordered={false} style={{ flex: 1, boxShadow: token.boxShadowTertiary, borderRadius: token.borderRadiusLG, display: 'flex', flexDirection: 'column' }}>
+        <Text type="secondary" style={{ fontSize: 16, marginBottom: 24, display: 'block' }}>Welcome back, {user?.email || 'User'}</Text>
+        <Flex vertical align="center" justify="center" style={{ flex: 1, minHeight: 300 }} gap="large">
+          <Typography.Title level={3} style={{ color: token.colorTextSecondary, marginTop: 0 }}>
             Under Construction 🚧
           </Typography.Title>
           <Typography.Text type="secondary" style={{ fontSize: token.fontSizeLG, textAlign: 'center', maxWidth: 500 }}>
@@ -26,7 +22,7 @@ export const Dashboard: React.FC = () => {
           </Typography.Text>
         </Flex>
       </Card>
-    </Flex>
+    </div>
   );
 };
 
