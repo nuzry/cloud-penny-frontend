@@ -35,7 +35,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         logoutLocally();
       }
     }
-    setIsLoading(false);
+    
+    // If there's an OAuth 'code' in the URL, the LandingPage will immediately
+    // call loginWithCode which sets isLoading to true. To prevent a UI flicker
+    // where it briefly shows the login screen before the exchange starts, 
+    // we keep isLoading true here if a code is present.
+    const hasCode = new URLSearchParams(window.location.search).has('code');
+    if (!hasCode) {
+      setIsLoading(false);
+    }
   }, []);
 
   const loginWithCode = async (code: string) => {
