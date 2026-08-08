@@ -68,7 +68,7 @@ const ConnectAWS: React.FC = () => {
       await apiClient.post('/v1/aws-connection/verify', { roleArn });
       
       // 2. If verification succeeds, save the ARN to the backend
-      await apiClient.post('/v1/aws-connection', { roleArn });
+      await apiClient.post('/v1/aws-connection', { roleArn, connectionStatus: 'VERIFIED' });
       
       message.success('AWS Account successfully connected! We are now syncing your CUR data.');
       // Optional: Redirect or change component state to show a massive success screen
@@ -181,7 +181,7 @@ const ConnectAWS: React.FC = () => {
           <Button 
             type="primary" 
             icon={<CloudServerOutlined />}
-            href={`https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://cloud-penny-bucket.s3.ap-southeast-1.amazonaws.com/cloud-formation/cloud-penny-role.yml&stackName=CloudPenny-Integration&param_TrustedAccountId=696223520485${externalId ? `&param_ExternalId=${externalId}` : ''}`}
+            href={`https://console.aws.amazon.com/cloudformation/home?region=ap-southeast-1#/stacks/create/review?templateURL=https://cloud-penny-bucket.s3.ap-southeast-1.amazonaws.com/cloud-formation/cloud-penny-role.yml&stackName=CloudPenny-Integration&param_TrustedAccountId=696223520485${externalId ? `&param_ExternalId=${externalId}` : ''}`}
             target="_blank"
             disabled={!externalId}
           >
