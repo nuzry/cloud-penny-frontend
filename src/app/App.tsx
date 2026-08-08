@@ -4,6 +4,9 @@ import LandingPage from '../pages/Landing/LandingPage';
 import Dashboard from '../pages/Dashboard/Dashboard';
 import ProfilePage from '../pages/Profile/ProfilePage';
 import SettingsPage from '../pages/Settings/SettingsPage';
+import ExportPage from '../pages/Export/ExportPage';
+import ContactPage from '../pages/Contact/ContactPage';
+import AlertsPage from '../pages/Alerts/AlertsPage';
 import { AuthProvider } from '../features/auth';
 import { ProtectedRoute } from '../features/auth';
 import AppLayout from '../components/layout/AppLayout';
@@ -45,8 +48,11 @@ function InnerApp() {
               <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout />}>
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/export" element={<ExportPage />} />
+                  <Route path="/alerts" element={<AlertsPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/contact" element={<ContactPage />} />
                 </Route>
               </Route>
             </Routes>

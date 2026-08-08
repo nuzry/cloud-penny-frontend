@@ -60,6 +60,6 @@ export const userService = {
    * This sends a DELETE request to /api/v1/clients/me
    */
   deleteCurrentUser: async (): Promise<void> => {
-    await apiClient.delete(`${BASE_URL}/me`);
+    await apiClient.delete('/v1/clients/me');
   }
 };

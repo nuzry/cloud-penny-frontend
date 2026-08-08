@@ -9,6 +9,11 @@ interface AuthContextType {
   isLoading: boolean;
   loginWithCode: (code: string) => Promise<void>;
   logout: () => void;
+  /** Clears auth state locally WITHOUT triggering a Cognito/browser navigation. 
+   *  Use this before async operations (e.g. delete account API) so the request
+   *  isn't aborted mid-flight by the page redirect that `logout()` causes.
+   */
+  clearSession: () => void;
   error: string | null;
 }
 
@@ -90,7 +95,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, isLoading, loginWithCode, logout, error }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, isLoading, loginWithCode, logout, clearSession: logoutLocally, error }}>
       {children}
     </AuthContext.Provider>
   );
