@@ -3,7 +3,7 @@ import { Typography, Card, Flex, theme } from 'antd';
 import { useAuth } from '../../features/auth';
 
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
