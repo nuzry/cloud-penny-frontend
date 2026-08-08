@@ -37,18 +37,14 @@ export const AppLayout: React.FC = () => {
       icon: <SettingOutlined />,
       label: 'Settings',
     },
+    {
+      key: '/profile',
+      icon: <UserOutlined />,
+      label: 'My Profile',
+    },
   ];
 
   const userMenuItems = [
-    {
-      key: 'profile',
-      icon: <UserOutlined />,
-      label: 'User Details',
-      onClick: () => navigate('/profile'),
-    },
-    {
-      type: 'divider' as const,
-    },
     {
       key: 'logout',
       icon: <LogoutOutlined />,
@@ -56,6 +52,16 @@ export const AppLayout: React.FC = () => {
       onClick: logout,
     },
   ];
+
+  // Map pathname to Page Title
+  const getPageTitle = (path: string) => {
+    switch (path) {
+      case '/dashboard': return 'Dashboard';
+      case '/settings': return 'Settings';
+      case '/profile': return 'My Profile';
+      default: return '';
+    }
+  };
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -106,17 +112,24 @@ export const AppLayout: React.FC = () => {
             justifyContent: 'space-between'
           }}
         >
-          <Button
-            type="text"
-            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => setCollapsed(!collapsed)}
-            style={{
-              fontSize: '16px',
-              width: 64,
-              height: 64,
-              marginLeft: -token.paddingLG, // Align with left edge
-            }}
-          />
+          <Flex align="center" gap={token.marginMD}>
+            <Button
+              type="text"
+              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              onClick={() => setCollapsed(!collapsed)}
+              style={{
+                fontSize: '16px',
+                width: 64,
+                height: 64,
+                marginLeft: -token.paddingLG, // Align with left edge
+              }}
+            />
+            {/* Dynamic Page Title in the Header */}
+            <Typography.Title level={4} style={{ margin: 0, fontWeight: 600 }}>
+              {getPageTitle(location.pathname)}
+            </Typography.Title>
+          </Flex>
+          
           <Flex align="center" gap={token.marginMD}>
             <Button
               type="text"
@@ -143,11 +156,13 @@ export const AppLayout: React.FC = () => {
         <Content
           style={{
             margin: token.marginLG,
-            padding: token.paddingLG,
-            background: token.colorBgContainer,
-            borderRadius: token.borderRadiusLG,
-            boxShadow: token.boxShadowTertiary,
+            padding: 0,
+            background: 'transparent',
+            borderRadius: 0,
+            boxShadow: 'none',
             overflow: 'initial',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
           {/* This is where the nested routes (e.g. Dashboard) will render */}

@@ -15,15 +15,16 @@ export interface ApiResponse<T> {
 export interface ClientProfile {
   tenantId: string;
   email: string;
-  onboardingStatus: 'pending' | 'connected';
   planTier: string;
-  awsAccountId?: string;
-  crossAccountRoleArn?: string;
+  externalId?: string;
+  roleArn?: string;
+  connectionStatus?: string;
+  lastVerifiedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-const BASE_URL = '/api/v1/clients'; // RESTful base for this resource
+const BASE_URL = '/v1/clients'; // RESTful base for this resource
 
 export const userService = {
   /**
