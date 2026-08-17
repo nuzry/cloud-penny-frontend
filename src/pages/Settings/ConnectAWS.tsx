@@ -17,6 +17,7 @@ const ConnectAWS: React.FC = () => {
   
   const [isAlreadyConnected, setIsAlreadyConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'UNCONNECTED' | 'PENDING' | 'VERIFIED'>('UNCONNECTED');
+  const [cfUrl, setCfUrl] = useState<string>('');
   const [initialLoading, setInitialLoading] = useState(true);
   const [tenantId, setTenantId] = useState<string>('');
 
@@ -39,6 +40,7 @@ const ConnectAWS: React.FC = () => {
             if (data.connectionStatus === 'VERIFIED') {
               setIsAlreadyConnected(true);
             } else if (data.connectionStatus === 'PENDING') {
+              if (data.cfUrl) setCfUrl(data.cfUrl);
               setCurrent(1); // Skip to instructions if pending
             }
           }
@@ -63,7 +65,10 @@ const ConnectAWS: React.FC = () => {
     setSavingAccount(true);
     try {
       const res = await apiClient.post('/v1/aws-connection', { awsAccountId });
-      setConnectionStatus(res.data.data.connectionStatus);
+      const data = res.data.data;
+      setConnectionStatus(data.connectionStatus);
+      if (data.cfUrl) setCfUrl(data.cfUrl);
+      
       message.success('AWS Account ID saved. Proceed to the next step.');
       next();
     } catch (error: any) {
@@ -144,8 +149,11 @@ const ConnectAWS: React.FC = () => {
             size="large"
             icon={<CloudServerOutlined />}
             onClick={() => {
-              const cfUrl = `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://cloud-penny-bucket.s3.ap-southeast-1.amazonaws.com/cloud-formation/cur-setup.yml&stackName=CloudPenny-CUR-Setup&param_TenantId=${tenantId}&param_CentralBucketName=${centralBucketName}&param_CentralBucketRegion=ap-southeast-1`;
-              window.open(cfUrl, '_blank');
+              if (cfUrl) {
+                window.open(cfUrl, '_blank');
+              } else {
+                message.error("CloudFormation URL not found. Please refresh the page.");
+              }
             }}
           >
             Deploy via AWS Quick Create
