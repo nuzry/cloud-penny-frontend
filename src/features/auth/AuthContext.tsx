@@ -85,6 +85,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     sessionStorage.removeItem('access_token');
     sessionStorage.removeItem('id_token');
     sessionStorage.removeItem('refresh_token');
+    sessionStorage.removeItem('aws_connect_cached_profile');
+    sessionStorage.removeItem('aws_connect_cached_verify');
     setUser(null);
     setIsAuthenticated(false);
   };
