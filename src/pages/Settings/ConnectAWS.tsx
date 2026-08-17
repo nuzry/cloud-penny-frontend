@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Steps, Button, Typography, Card, theme, Space, Alert, message, Input } from 'antd';
-import { CloudServerOutlined, LockOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { CloudServerOutlined, LockOutlined, CheckCircleOutlined, CopyOutlined } from '@ant-design/icons';
 import apiClient from '../../lib/apiClient';
 import { userService } from '../../api/userService';
 import PageLoader from '../../components/ui/PageLoader';
@@ -135,23 +135,36 @@ const ConnectAWS: React.FC = () => {
       content: (
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <Text>
-            Deploy the Cost and Usage Report (CUR) directly into your AWS Account using our 1-click CloudFormation setup. 
-            This will automatically configure AWS to deliver your billing data to our secure data lake.
+            Navigate to your AWS Billing Console and create a new Legacy Cost and Usage Report (CUR) with the following settings:
           </Text>
 
-          <Button 
-            type="primary" 
-            size="large"
-            icon={<CloudServerOutlined />}
-            onClick={() => {
-              const cfUrl = `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://cloud-penny-bucket.s3.ap-southeast-1.amazonaws.com/cloud-formation/cur-setup.yml&stackName=CloudPenny-CUR-Setup&param_TenantId=${tenantId}&param_CentralBucketName=${centralBucketName}&param_CentralBucketRegion=ap-southeast-1`;
-              window.open(cfUrl, '_blank');
-            }}
-          >
-            Deploy via AWS Quick Create
-          </Button>
+          <Card size="small" style={{ background: token.colorFillAlter, border: `1px solid ${token.colorPrimaryBorder}` }}>
+            <ul style={{ paddingLeft: 20, margin: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <li>
+                <Text strong>Report Name:</Text> <Text>CloudPenny-CUR</Text>
+              </li>
+              <li>
+                <Text strong>Time unit:</Text> <Text>Hourly</Text>
+              </li>
+              <li>
+                <Text strong>Format:</Text> <Text>Parquet</Text>
+              </li>
+              <li>
+                <Text strong>S3 Bucket Name:</Text>
+                <Paragraph copyable={{ text: centralBucketName }} style={{ margin: 0, display: 'inline-block', marginLeft: 8 }}>
+                  <code>{centralBucketName}</code>
+                </Paragraph>
+              </li>
+              <li>
+                <Text strong>Report path prefix:</Text>
+                <Paragraph copyable={{ text: tenantId }} style={{ margin: 0, display: 'inline-block', marginLeft: 8 }}>
+                  <code>{tenantId}</code>
+                </Paragraph>
+              </li>
+            </ul>
+          </Card>
           
-          <Alert message="Ensure you are logged into your AWS account before clicking." type="info" showIcon />
+          <Alert message="Important: Please copy the S3 Bucket Name and Report path prefix exactly as shown." type="warning" showIcon />
         </Space>
       ),
     },
