@@ -5,7 +5,7 @@ import apiClient from '../../lib/apiClient';
 import { userService } from '../../api/userService';
 import PageLoader from '../../components/ui/PageLoader';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 const ConnectAWS: React.FC = () => {
   const { token } = theme.useToken();
