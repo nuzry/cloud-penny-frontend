@@ -149,8 +149,11 @@ const ConnectAWS: React.FC = () => {
             size="large"
             icon={<CloudServerOutlined />}
             onClick={() => {
-              const cfUrl = `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://cloud-penny-bucket.s3.ap-southeast-1.amazonaws.com/cloud-formation/cur-setup.yml&stackName=CloudPenny-CUR-Setup&param_TenantId=${tenantId}&param_CentralBucketName=${centralBucketName}&param_CentralBucketRegion=ap-southeast-1&param_S3Prefix=${awsAccountId}&param_ExportName=CloudPenny-${tenantId}`;
-              window.open(cfUrl, '_blank');
+              if (cfUrl) {
+                window.open(cfUrl, '_blank');
+              } else {
+                message.error("CloudFormation URL not found. Please refresh the page.");
+              }
             }}
           >
             Deploy via AWS Quick Create
