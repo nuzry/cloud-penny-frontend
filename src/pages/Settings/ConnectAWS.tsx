@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Steps, Button, Typography, Card, theme, Space, Alert, message, Input } from 'antd';
-import { CloudServerOutlined, LockOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { CloudServerOutlined, LockOutlined, CheckCircleOutlined, CopyOutlined } from '@ant-design/icons';
 import apiClient from '../../lib/apiClient';
 import { userService } from '../../api/userService';
 import PageLoader from '../../components/ui/PageLoader';
@@ -149,11 +149,8 @@ const ConnectAWS: React.FC = () => {
             size="large"
             icon={<CloudServerOutlined />}
             onClick={() => {
-              if (cfUrl) {
-                window.open(cfUrl, '_blank');
-              } else {
-                message.error("CloudFormation URL not found. Please refresh the page.");
-              }
+              const cfUrl = `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://cloud-penny-bucket.s3.ap-southeast-1.amazonaws.com/cloud-formation/cur-setup.yml&stackName=CloudPenny-CUR-Setup&param_TenantId=${tenantId}&param_CentralBucketName=${centralBucketName}&param_CentralBucketRegion=ap-southeast-1`;
+              window.open(cfUrl, '_blank');
             }}
           >
             Deploy via AWS Quick Create
