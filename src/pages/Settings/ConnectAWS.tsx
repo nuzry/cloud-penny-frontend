@@ -5,7 +5,7 @@ import apiClient from '../../lib/apiClient';
 import { userService } from '../../api/userService';
 import PageLoader from '../../components/ui/PageLoader';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 const ConnectAWS: React.FC = () => {
   const { token } = theme.useToken();
@@ -17,7 +17,7 @@ const ConnectAWS: React.FC = () => {
   
   const [isAlreadyConnected, setIsAlreadyConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'UNCONNECTED' | 'PENDING' | 'VERIFIED'>('UNCONNECTED');
-  const [cfUrl, setCfUrl] = useState<string>('');
+
   const [initialLoading, setInitialLoading] = useState(true);
   const [tenantId, setTenantId] = useState<string>('');
 
@@ -40,7 +40,6 @@ const ConnectAWS: React.FC = () => {
             if (data.connectionStatus === 'VERIFIED') {
               setIsAlreadyConnected(true);
             } else if (data.connectionStatus === 'PENDING') {
-              if (data.cfUrl) setCfUrl(data.cfUrl);
               setCurrent(1); // Skip to instructions if pending
             }
           }
@@ -67,7 +66,6 @@ const ConnectAWS: React.FC = () => {
       const res = await apiClient.post('/v1/aws-connection', { awsAccountId });
       const data = res.data.data;
       setConnectionStatus(data.connectionStatus);
-      if (data.cfUrl) setCfUrl(data.cfUrl);
       
       message.success('AWS Account ID saved. Proceed to the next step.');
       next();
