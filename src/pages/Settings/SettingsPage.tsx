@@ -3,15 +3,16 @@ import { Typography, Card, Flex, theme } from 'antd';
 import { SettingOutlined, AmazonOutlined, UserOutlined } from '@ant-design/icons';
 import ConnectAWS from './ConnectAWS';
 import AccountSettings from './AccountSettings';
+import DataRefreshSettings from './DataRefreshSettings';
 
 const SettingsPage: React.FC = () => {
   const { token } = theme.useToken();
-  const [activeTab, setActiveTab] = useState('general');
+  const [activeTab, setActiveTab] = useState('data');
 
   const tabs = [
     {
-      id: 'general',
-      label: 'General',
+      id: 'data',
+      label: 'Data Settings',
       icon: <SettingOutlined />
     },
     {
@@ -101,14 +102,9 @@ const SettingsPage: React.FC = () => {
 
           {/* Content */}
           <div style={{ flex: 1 }}>
-            {activeTab === 'general' && (
-              <Flex vertical align="center" justify="center" style={{ minHeight: 300 }} gap="large">
-                <Typography.Title level={3} style={{ color: token.colorTextSecondary }}>
-                  Under Construction 🚧
-                </Typography.Title>
-                <Typography.Text type="secondary" style={{ fontSize: token.fontSizeLG, textAlign: 'center', maxWidth: 500 }}>
-                  General settings are coming soon.
-                </Typography.Text>
+            {activeTab === 'data' && (
+              <Flex vertical style={{ padding: `${token.padding}px 0` }}>
+                <DataRefreshSettings />
               </Flex>
             )}
             {activeTab === 'aws' && <ConnectAWS />}
