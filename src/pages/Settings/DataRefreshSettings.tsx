@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Typography, Button, message, Flex, Spin, Card, Select, Divider, theme } from 'antd';
 import apiClient from '../../lib/apiClient';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 const DataRefreshSettings: React.FC = () => {
   const { token } = theme.useToken();
