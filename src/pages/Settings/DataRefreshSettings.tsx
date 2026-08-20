@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, InputNumber, Button, message, Flex, Spin, Card, Select } from 'antd';
-import { SaveOutlined } from '@ant-design/icons';
+import { Typography, Button, message, Flex, Spin, Card, Select } from 'antd';
 import apiClient from '../../lib/apiClient';
 
 const { Title, Text, Paragraph } = Typography;
