@@ -19,15 +19,11 @@ const ConnectAWS: React.FC = () => {
   const [connectionStatus, setConnectionStatus] = useState<'UNCONNECTED' | 'PENDING' | 'VERIFIED'>('UNCONNECTED');
   const [cfUrl, setCfUrl] = useState<string>('');
   const [initialLoading, setInitialLoading] = useState(true);
-  const [tenantId, setTenantId] = useState<string>('');
-
-  const centralBucketName = 'cloudpenny-central-curs-dev'; // Should ideally come from env
 
   useEffect(() => {
     const checkStatus = async () => {
       try {
-        const profile = await userService.getCurrentUser();
-        setTenantId(profile.tenantId || 'your-tenant-id');
+        await userService.getCurrentUser();
         
         try {
           const connRes = await apiClient.get('/v1/aws-connection');
@@ -45,7 +41,7 @@ const ConnectAWS: React.FC = () => {
             }
           }
         } catch (err) {
-          console.error("No existing connection found.");
+          console.error("No existing connection found.", err);
         }
       } catch (error) {
         console.error('Failed to fetch user profile:', error);
@@ -71,9 +67,9 @@ const ConnectAWS: React.FC = () => {
       
       message.success('AWS Account ID saved. Proceed to the next step.');
       next();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to save account:', error);
-      message.error(error.response?.data?.error || 'Failed to save account ID.');
+      message.error((error as any).response?.data?.error || 'Failed to save account ID.');
     } finally {
       setSavingAccount(false);
     }
@@ -91,9 +87,9 @@ const ConnectAWS: React.FC = () => {
       } else {
         message.info(verifyResponse.data.error || 'No data received yet. This can take up to 24 hours. Check back later.');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to verify connection:', error);
-      message.error(error.response?.data?.error || 'Failed to verify connection.');
+      message.error((error as any).response?.data?.error || 'Failed to verify connection.');
     } finally {
       setVerifying(false);
     }
