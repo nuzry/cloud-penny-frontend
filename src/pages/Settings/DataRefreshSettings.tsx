@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, InputNumber, Button, message, Flex, Spin, Card } from 'antd';
+import { Typography, InputNumber, Button, message, Flex, Spin, Card, Select } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
 import apiClient from '../../lib/apiClient';
 
@@ -60,23 +60,22 @@ const DataRefreshSettings: React.FC = () => {
       <Flex vertical gap="middle" style={{ maxWidth: 400 }}>
         <div>
           <Text strong style={{ display: 'block', marginBottom: 8 }}>Daily Refresh Quota</Text>
-          <InputNumber
-            min={1}
-            max={10}
+          <Select
             value={quota}
-            onChange={(val) => setQuota(val || 1)}
+            onChange={(val) => setQuota(val)}
             style={{ width: '100%' }}
             size="large"
-            placeholder="e.g. 1"
-          />
+          >
+            <Select.Option value={1}>1 Refresh per day</Select.Option>
+            <Select.Option value={2}>2 Refreshes per day</Select.Option>
+            <Select.Option value={3}>3 Refreshes per day</Select.Option>
+          </Select>
         </div>
         
         <Button 
           type="primary" 
-          icon={<SaveOutlined />} 
           onClick={handleSave} 
           loading={saving}
-          size="large"
           style={{ width: 'fit-content', marginTop: 16 }}
         >
           Save Changes
