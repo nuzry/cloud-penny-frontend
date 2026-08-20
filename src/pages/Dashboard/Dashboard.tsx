@@ -194,7 +194,7 @@ export const Dashboard: React.FC = () => {
                       color: token.colorText
                     }}
                     itemStyle={{ color: token.colorPrimary }}
-                    formatter={(value: number) => [`$${value.toFixed(2)}`, 'Cost']}
+                    formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Cost']}
                     labelFormatter={(label) => `Date: ${label}`}
                   />
                   <Area 
@@ -236,12 +236,12 @@ export const Dashboard: React.FC = () => {
                       dataKey="value"
                       stroke="none"
                     >
-                      {serviceData.map((entry, index) => (
+                      {serviceData.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
                     <RechartsTooltip 
-                      formatter={(value: number) => [`$${value.toFixed(2)}`, 'Cost']}
+                      formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Cost']}
                       contentStyle={{ 
                         backgroundColor: token.colorBgElevated, 
                         borderColor: token.colorBorder,
