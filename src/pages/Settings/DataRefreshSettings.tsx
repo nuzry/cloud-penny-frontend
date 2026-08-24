@@ -1,56 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Button, message, Flex, Spin, Card, Select, Divider, theme } from 'antd';
-import apiClient from '../../lib/apiClient';
+import { Typography, Button, message, Flex, Spin, Card, Select, theme } from 'antd';
+import { useClientMe, useUpdateClientMe } from '../../hooks/useQueries';
 
 const { Title, Text } = Typography;
 
 const DataRefreshSettings: React.FC = () => {
   const { token } = theme.useToken();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [quota, setQuota] = useState<number>(1);
+  
+  const { data: profile, isLoading } = useClientMe();
+  const updateClientMe = useUpdateClientMe();
 
   useEffect(() => {
-    const fetchQuota = async () => {
-      try {
-        const res = await apiClient.get('/v1/clients/me');
-        if (res.data?.data?.dailyRefreshQuota !== undefined) {
-          setQuota(res.data.data.dailyRefreshQuota);
-        }
-      } catch (err) {
-        console.error('Failed to fetch data refresh settings:', err);
-        message.error('Failed to load settings.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchQuota();
-  }, []);
+    if (profile?.dailyRefreshQuota !== undefined) {
+      setQuota(profile.dailyRefreshQuota);
+    }
+  }, [profile]);
 
   const handleSave = async () => {
-    setSaving(true);
     try {
-      await apiClient.put('/v1/clients/me', { dailyRefreshQuota: quota });
+      await updateClientMe.mutateAsync({ dailyRefreshQuota: quota });
       message.success('Data refresh settings saved successfully!');
     } catch (err) {
       console.error('Failed to update quota:', err);
       message.error('Failed to save settings.');
-    } finally {
-      setSaving(false);
     }
   };
 
-  const handleTriggerSample = async () => {
-    try {
-      message.loading({ content: 'Injecting sample data...', key: 'sample' });
-      await apiClient.post('/v1/dev/trigger-sample-cur');
-      message.success({ content: 'Sample data injected! Orchestration triggered.', key: 'sample', duration: 3 });
-    } catch (err: any) {
-      message.error({ content: err.response?.data?.message || 'Failed to trigger sample data', key: 'sample', duration: 3 });
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <Flex justify="center" align="center" style={{ minHeight: 300 }}>
         <Spin size="large" />
@@ -90,27 +67,12 @@ const DataRefreshSettings: React.FC = () => {
             <Button 
               type="primary" 
               onClick={handleSave} 
-              loading={saving}
+              loading={updateClientMe.isPending}
               size="middle"
             >
               Save Changes
             </Button>
           </div>
-        </div>
-        
-        <Divider style={{ margin: '8px 0' }} />
-        
-        <div>
-          <Title level={5} style={{ marginTop: 0, marginBottom: '8px' }}>Developer Tools</Title>
-          <Text type="secondary" style={{ display: 'block', marginBottom: '16px' }}>
-            Inject a dummy CUR file to test the data orchestration pipeline (S3 → SQS → Athena → DynamoDB).
-          </Text>
-          <Button 
-            onClick={handleTriggerSample} 
-            size="middle"
-          >
-            Trigger Sample Data
-          </Button>
         </div>
       </div>
     </Card>

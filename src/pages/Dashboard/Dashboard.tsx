@@ -1,267 +1,483 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { Typography, Card, Row, Col, Spin, theme } from 'antd';
+import React, { useState, useMemo } from 'react';
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend
-} from 'recharts';
-import apiClient from '../../lib/apiClient';
+  Typography, Card, Row, Col, Statistic, Select, Segmented, Table, Tag, Empty, Spin, Flex, theme, Button, DatePicker,
+} from 'antd';
+import {
+  ArrowUpOutlined, ArrowDownOutlined, DollarOutlined,
+  CloudServerOutlined, FilterOutlined, BarChartOutlined, LineChartOutlined,
+} from '@ant-design/icons';
+import { Column, Bar, Pie, Line } from '@ant-design/plots';
+import { useTheme } from '../../app/providers';
+import { useNavigate } from 'react-router-dom';
+import { useDashboardData, useClientMe } from '../../hooks/useQueries';
 
 const { Title, Text } = Typography;
 
-interface DashboardData {
-  dailySpend: Record<string, { N: string }>;
-  services: Record<string, { N: string }>;
-  totalCost: number;
-  currency: string;
-  updatedAt: string;
-  message?: string;
-}
+// ─── Types matching exact Athena output shape ───────────────────────────────
 
-const COLORS = ['#4f46e5', '#ec4899', '#06b6d4', '#10b981', '#f59e0b', '#8b5cf6'];
+// ─── Helpers ────────────────────────────────────────────────────────────────
+const fmt = (val: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 6 }).format(val);
+const fmtCompact = (v: number) => {
+  if (Math.abs(v) >= 1000) return `$${(v / 1000).toFixed(1)}k`;
+  return fmt(v);
+};
 
 export const Dashboard: React.FC = () => {
-  const { token } = theme.useToken();
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchDashboard = async () => {
-      try {
-        setLoading(true);
-        const res = await apiClient.get('/v1/dashboard');
-        setData(res.data);
-      } catch (err) {
-        console.error("Failed to load dashboard data", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchDashboard();
-  }, []);
-
-  const chartData = useMemo(() => {
-    if (!data?.dailySpend) return [];
-    
-    // Sort dates
-    const dates = Object.keys(data.dailySpend).sort();
-    return dates.map(date => {
-      // Cost is negative in CUR typically, we want to show positive spend
-      const rawCost = parseFloat(data.dailySpend[date].N);
-      const cost = Math.abs(rawCost);
-      return {
-        date: date.substring(5), // e.g. "08-01"
-        fullDate: date,
-        cost: Number(cost.toFixed(2))
-      };
-    });
-  }, [data]);
-
-  const serviceData = useMemo(() => {
-    if (!data?.services) return [];
-    
-    const services = Object.keys(data.services);
-    return services.map(service => {
-      const rawCost = parseFloat(data.services[service].N);
-      return {
-        name: service.replace('Amazon', '').replace('AWS', ''), // Clean up names
-        value: Number(Math.abs(rawCost).toFixed(2))
-      };
-    }).filter(s => s.value > 0) // Only show services with > $0 spend
-      .sort((a, b) => b.value - a.value);
-  }, [data]);
-
-  const topService = serviceData.length > 0 ? serviceData[0].name : 'N/A';
-  const totalCost = data ? Math.abs(data.totalCost).toFixed(2) : '0.00';
+  const { data: profile, isLoading: isProfileLoading } = useClientMe();
+  const isConnected = profile?.connectionStatus === 'VERIFIED';
   
-  // Forecast: extrapolate based on days passed
-  const forecast = useMemo(() => {
-    if (!chartData.length || !data) return '0.00';
-    const totalDaysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-    const daysPassed = chartData.length;
-    if (daysPassed === 0) return '0.00';
-    const averageDaily = Math.abs(data.totalCost) / daysPassed;
-    return (averageDaily * totalDaysInMonth).toFixed(2);
-  }, [chartData, data]);
+  const { data: dashboardData, isLoading: isDashboardLoading } = useDashboardData(isConnected);
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-        <Spin size="large" />
-      </div>
-    );
-  }
+  const loading = isProfileLoading || isDashboardLoading;
+  const data: any[] = dashboardData?.dailyItems || [];
 
-  if (data?.message) {
+  const { token } = theme.useToken();
+  const { mode } = useTheme();
+  const isDark = mode === 'dark';
+  const navigate = useNavigate();
+
+  const [dateRange, setDateRange] = useState<number | 'custom'>(30);
+  const [customDateRange, setCustomDateRange] = useState<[string, string] | null>(null);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
+  const [selectedLineItemTypes, setSelectedLineItemTypes] = useState<string[]>(['Usage']);
+  const [dailyChartType, setDailyChartType] = useState<'column' | 'line'>('column');
+
+  // ── Derive filter options from data ─────────────────────────────────────
+  const allServices = useMemo(() => [...new Set(data.map(r => r.service).filter(s => s !== 'Aggregate'))].sort(), [data]);
+  const allRegions = useMemo(() => [...new Set(data.map(r => r.region).filter(Boolean))].sort(), [data]);
+  const allLineItemTypes = useMemo(() => [...new Set(data.map(r => r.lineItemType))].sort(), [data]);
+
+  // ── Filtered data ───────────────────────────────────────────────────────
+  const filteredData = useMemo(() => {
+    return data.filter(r => {
+      if (dateRange === 'custom') {
+        if (customDateRange) {
+          if (r.date < customDateRange[0] || r.date > customDateRange[1]) return false;
+        }
+      } else {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - (dateRange as number));
+        const cutoffStr = cutoff.toISOString().split('T')[0];
+        if (r.date < cutoffStr) return false;
+      }
+      
+      if (selectedServices.length > 0 && !selectedServices.includes(r.service)) return false;
+      if (selectedRegions.length > 0 && !selectedRegions.includes(r.region)) return false;
+      if (selectedLineItemTypes.length > 0 && !selectedLineItemTypes.includes(r.lineItemType)) return false;
+      if (r.service === 'Aggregate') return false;
+      return true;
+    });
+  }, [data, dateRange, customDateRange, selectedServices, selectedRegions, selectedLineItemTypes]);
+
+  // ── KPIs ────────────────────────────────────────────────────────────────
+  const kpis = useMemo(() => {
+    const usageRows = filteredData.filter(r => r.lineItemType === 'Usage');
+    const totalSpend = usageRows.reduce((s, r) => s + r.cost, 0);
+    const creditRows = data.filter(r => r.lineItemType === 'Credit');
+    const totalCredits = creditRows.reduce((s, r) => s + r.cost, 0); // negative
+    const spRows = data.filter(r => r.lineItemType === 'SavingsPlanCoveredUsage');
+    const spSavings = spRows.reduce((s, r) => s + r.cost, 0); // Need SP specific fields later if relevant
+
+    const dates = [...new Set(usageRows.map(r => r.date))];
+    const daysPassed = dates.length || 1;
+    const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+    const forecast = (totalSpend / daysPassed) * daysInMonth;
+
+    // Top service
+    const byService: Record<string, number> = {};
+    usageRows.forEach(r => { byService[r.service] = (byService[r.service] || 0) + r.cost; });
+    const topService = Object.entries(byService).sort((a, b) => b[1] - a[1])[0];
+
+    return { totalSpend, forecast, totalCredits, spSavings, topService, daysPassed };
+  }, [filteredData]);
+
+  // ── Daily Spend (stacked column) ────────────────────────────────────────
+  const dailySpendData = useMemo(() => {
+    const usageRows = filteredData.filter(r => r.lineItemType === 'Usage');
+    const grouped: Record<string, Record<string, number>> = {};
+    usageRows.forEach(r => {
+      if (!grouped[r.date]) grouped[r.date] = {};
+      grouped[r.date][r.service] = (grouped[r.date][r.service] || 0) + r.cost;
+    });
+
+    const result: { date: string; service: string; cost: number }[] = [];
+    Object.entries(grouped).sort((a, b) => a[0].localeCompare(b[0])).forEach(([date, services]) => {
+      Object.entries(services).forEach(([service, cost]) => {
+        result.push({ date: date.substring(5), service, cost: Number(cost.toFixed(4)) });
+      });
+    });
+    return result;
+  }, [filteredData]);
+
+  // ── Cost by Service (horizontal bar) ────────────────────────────────────
+  const serviceData = useMemo(() => {
+    const usageRows = filteredData.filter(r => r.lineItemType === 'Usage');
+    const grouped: Record<string, number> = {};
+    usageRows.forEach(r => { grouped[r.service] = (grouped[r.service] || 0) + r.cost; });
+    return Object.entries(grouped)
+      .filter(([, c]) => c !== 0)
+      .sort((a, b) => a[1] - b[1]) // ascending for horizontal bar
+      .map(([service, cost]) => ({ service, cost: Number(cost.toFixed(6)) }));
+  }, [filteredData]);
+
+  // ── Cost by Region ──────────────────────────────────────────────────────
+  const regionData = useMemo(() => {
+    const usageRows = filteredData.filter(r => r.lineItemType === 'Usage' && r.region);
+    const grouped: Record<string, number> = {};
+    usageRows.forEach(r => { grouped[r.region] = (grouped[r.region] || 0) + r.cost; });
+    return Object.entries(grouped)
+      .filter(([, c]) => c !== 0)
+      .sort((a, b) => a[1] - b[1])
+      .map(([region, cost]) => ({ region, cost: Number(cost.toFixed(6)) }));
+  }, [filteredData]);
+
+
+  // ── Cost Type Breakdown (donut) ─────────────────────────────────────────
+  const costTypeData = useMemo(() => {
+    const grouped: Record<string, number> = {};
+    filteredData.forEach(r => {
+      grouped[r.lineItemType] = (grouped[r.lineItemType] || 0) + Math.abs(r.cost);
+    });
+    return Object.entries(grouped)
+      .filter(([, v]) => v !== 0)
+      .map(([type, value]) => ({ type, value: Number(value.toFixed(6)) }));
+  }, [filteredData]);
+
+  // ── Top Operations Table ────────────────────────────────────────────────
+  const operationsTableData = useMemo(() => {
+    const usageRows = filteredData.filter(r => r.lineItemType === 'Usage');
+    const grouped: Record<string, { service: string; operation: string; region: string; usageAmount: number; cost: number }> = {};
+    usageRows.forEach(r => {
+      const key = `${r.service}|${r.operation}|${r.region}`;
+      if (!grouped[key]) grouped[key] = { service: r.service, operation: r.operation, region: r.region || '—', usageAmount: 0, cost: 0 };
+      grouped[key].usageAmount += r.usageAmount;
+      grouped[key].cost += r.cost;
+    });
+    return Object.values(grouped)
+      .sort((a, b) => b.cost - a.cost)
+      .slice(0, 15)
+      .map((row, i) => ({ ...row, key: i, cost: Number(row.cost.toFixed(4)) }));
+  }, [filteredData]);
+
+  // ── Has data checks for graceful degradation ───────────────────────────
+  const hasRegionData = regionData.length > 0;
+
+  // ── Chart click interaction ─────────────────────────────────────────────
+
+
+  if (loading) return <Flex justify="center" align="center" style={{ height: '60vh' }}><Spin size="large" /></Flex>;
+
+  // ── Dark-mode aware chart theme ─────────────────────────────────────────
+  const textColor = isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)';
+  const textColorSecondary = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)';
+  const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+
+  const chartTheme = {
+    theme: isDark ? 'classicDark' : 'classic',
+  };
+
+  // ── Chart configs ───────────────────────────────────────────────────────
+  const stackedColumnConfig = {
+    ...chartTheme,
+    data: dailySpendData,
+    xField: 'date',
+    yField: 'cost',
+    colorField: 'service',
+    stack: true,
+    axis: {
+      y: { labelFormatter: (v: number) => `$${v}`, label: { style: { fill: textColor } }, grid: { line: { style: { stroke: gridColor } } } },
+      x: { label: { style: { fill: textColor } } },
+    },
+    tooltip: { items: [{ channel: 'y', valueFormatter: (v: number) => fmt(v) }] },
+    interaction: { elementHighlight: true },
+  };
+
+  const lineConfig = {
+    ...chartTheme,
+    data: dailySpendData,
+    xField: 'date',
+    yField: 'cost',
+    colorField: 'service',
+    axis: {
+      y: { labelFormatter: (v: number) => `$${v}`, label: { style: { fill: textColor } }, grid: { line: { style: { stroke: gridColor } } } },
+      x: { label: { style: { fill: textColor } } },
+    },
+    tooltip: { items: [{ channel: 'y', valueFormatter: (v: number) => fmt(v) }] },
+    point: { shapeField: 'circle', sizeField: 3 },
+    interaction: { elementHighlight: true },
+  };
+
+  const serviceBarConfig = {
+    ...chartTheme,
+    data: serviceData,
+    xField: 'service',
+    yField: 'cost',
+    colorField: 'service',
+    axis: {
+      x: { title: false, label: { style: { fill: textColor, fontSize: 12 } } },
+      y: { labelFormatter: (v: number) => fmtCompact(v), label: { style: { fill: textColorSecondary } }, grid: { line: { style: { stroke: gridColor } } } },
+    },
+    tooltip: { items: [{ channel: 'y', valueFormatter: (v: number) => fmt(v) }] },
+    label: { 
+      text: (d: any) => fmt(d.cost), 
+      position: 'right',
+      dx: 5,
+      style: { fill: textColor, fontSize: 11, textAlign: 'left' } 
+    },
+    marginRight: 60,
+  };
+
+  const regionBarConfig = {
+    ...chartTheme,
+    data: regionData,
+    xField: 'region',
+    yField: 'cost',
+    colorField: 'region',
+    axis: {
+      x: { title: false, label: { style: { fill: textColor } } },
+      y: { labelFormatter: (v: number) => fmtCompact(v), label: { style: { fill: textColorSecondary } }, grid: { line: { style: { stroke: gridColor } } } },
+    },
+    tooltip: { items: [{ channel: 'y', valueFormatter: (v: number) => fmt(v) }] },
+    label: { 
+      text: (d: any) => fmt(d.cost), 
+      position: 'right',
+      dx: 5,
+      style: { fill: textColor, fontSize: 11, textAlign: 'left' } 
+    },
+    marginRight: 60,
+  };
+
+
+  const costTypeDonutConfig = {
+    ...chartTheme,
+    data: costTypeData,
+    angleField: 'value',
+    colorField: 'type',
+    innerRadius: 0.6,
+    tooltip: { items: [{ channel: 'y', valueFormatter: (v: number) => fmt(v) }] },
+    legend: { color: { position: 'bottom' as const, itemLabelFill: textColor } },
+    label: { text: 'type', position: 'outside' as const, style: { fill: textColor } },
+  };
+
+  const tableColumns = [
+    { title: 'Service', dataIndex: 'service', key: 'service', render: (v: string) => <Tag>{v}</Tag> },
+    { title: 'Operation', dataIndex: 'operation', key: 'operation' },
+    { title: 'Region', dataIndex: 'region', key: 'region' },
+    { title: 'Usage Qty', dataIndex: 'usageAmount', key: 'usageAmount', align: 'right' as const, render: (v: number) => v.toLocaleString(), sorter: (a: any, b: any) => a.usageAmount - b.usageAmount },
+    { title: 'Unblended Cost', dataIndex: 'cost', key: 'cost', align: 'right' as const, render: (v: number) => <Text strong>{fmt(v)}</Text>, sorter: (a: any, b: any) => a.cost - b.cost, defaultSortOrder: 'descend' as const },
+  ];
+
+  if (!isConnected && !loading) {
     return (
-      <div style={{ padding: 24, textAlign: 'center' }}>
-        <Title level={3} style={{ color: token.colorTextSecondary }}>{data.message}</Title>
-      </div>
+      <Card style={{ textAlign: 'center', marginTop: 40, padding: 60, borderRadius: 12 }}>
+        <CloudServerOutlined style={{ fontSize: 64, color: token.colorTextSecondary, marginBottom: 24 }} />
+        <Title level={3}>AWS Account Not Connected</Title>
+        <Text type="secondary" style={{ fontSize: 16 }}>
+          Please connect your AWS account to view your cost and usage analytics.
+        </Text>
+        <br/><br/>
+        <Button type="primary" size="large" onClick={() => navigate('/settings')}>
+          Connect AWS Account
+        </Button>
+      </Card>
     );
   }
 
   return (
-    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <Title level={2} style={{ marginTop: 0, marginBottom: 0 }}>AWS Cost Overview</Title>
+    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Header */}
+      <Flex justify="space-between" align="center" wrap="wrap" gap={16}>
+        <div>
+          <Title level={3} style={{ margin: 0 }}>Cost & Usage Dashboard</Title>
+          <Text type="secondary">AWS Cloud Cost Analytics • {kpis.daysPassed}-day view</Text>
+        </div>
+        <Tag color="green">Live Data Connected</Tag>
+      </Flex>
 
-      {/* Summary Cards */}
-      <Row gutter={[24, 24]}>
-        <Col xs={24} sm={8}>
-          <Card 
-            bordered={false} 
-            style={{ 
-              borderRadius: token.borderRadiusLG, 
-              boxShadow: token.boxShadowTertiary,
-              background: `linear-gradient(135deg, ${token.colorBgContainer}, ${token.colorPrimaryBg})`
-            }}
-          >
-            <Text type="secondary" style={{ fontSize: 16 }}>Month-to-Date Spend</Text>
-            <Title level={1} style={{ marginTop: 8, marginBottom: 0, color: token.colorPrimary }}>
-              ${totalCost}
-            </Title>
+      {/* Filters */}
+      <Card size="small">
+        <Flex wrap="wrap" gap={16} align="center">
+          <Flex align="center" gap={8}>
+            <FilterOutlined />
+            <Segmented
+              options={[
+                { label: 'Today', value: 1 },
+                { label: 'Last 7d', value: 7 },
+                { label: 'Last 14d', value: 14 },
+                { label: 'Last 30d', value: 30 },
+                { label: 'Custom', value: 'custom' },
+              ]}
+              value={dateRange}
+              onChange={(v) => setDateRange(v as number | 'custom')}
+            />
+            {dateRange === 'custom' && (
+              <DatePicker.RangePicker 
+                onChange={(_, dateStrings) => {
+                  if (dateStrings && dateStrings[0] && dateStrings[1]) {
+                    setCustomDateRange([dateStrings[0], dateStrings[1]]);
+                  } else {
+                    setCustomDateRange(null);
+                  }
+                }}
+              />
+            )}
+          </Flex>
+          <Select
+            mode="multiple"
+            allowClear
+            placeholder="All Services"
+            style={{ minWidth: 200 }}
+            value={selectedServices}
+            onChange={setSelectedServices}
+            options={allServices.map(s => ({ label: s, value: s }))}
+            maxTagCount={2}
+          />
+          {allRegions.length > 0 && (
+            <Select
+              mode="multiple"
+              allowClear
+              placeholder="All Regions"
+              style={{ minWidth: 180 }}
+              value={selectedRegions}
+              onChange={setSelectedRegions}
+              options={allRegions.map(r => ({ label: r, value: r }))}
+              maxTagCount={2}
+            />
+          )}
+
+          <Select
+            mode="multiple"
+            allowClear
+            placeholder="Line Item Type"
+            style={{ minWidth: 180 }}
+            value={selectedLineItemTypes}
+            onChange={setSelectedLineItemTypes}
+            options={allLineItemTypes.map(t => ({ label: t, value: t }))}
+            maxTagCount={2}
+          />
+        </Flex>
+      </Card>
+
+      {/* KPI Row */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Total Spend"
+              value={kpis.totalSpend}
+              precision={2}
+              prefix={<DollarOutlined />}
+              formatter={(v) => fmt(v as number)}
+            />
           </Card>
         </Col>
-        <Col xs={24} sm={8}>
-          <Card 
-            bordered={false} 
-            style={{ 
-              borderRadius: token.borderRadiusLG, 
-              boxShadow: token.boxShadowTertiary,
-              background: token.colorBgContainer
-            }}
-          >
-            <Text type="secondary" style={{ fontSize: 16 }}>Forecasted Month Spend</Text>
-            <Title level={1} style={{ marginTop: 8, marginBottom: 0 }}>
-              ${forecast}
-            </Title>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Forecasted Month"
+              value={kpis.forecast}
+              precision={2}
+              prefix={<ArrowUpOutlined />}
+              formatter={(v) => fmt(v as number)}
+              valueStyle={{ color: '#cf1322' }}
+            />
           </Card>
         </Col>
-        <Col xs={24} sm={8}>
-          <Card 
-            bordered={false} 
-            style={{ 
-              borderRadius: token.borderRadiusLG, 
-              boxShadow: token.boxShadowTertiary,
-              background: token.colorBgContainer
-            }}
-          >
-            <Text type="secondary" style={{ fontSize: 16 }}>Top Spending Service</Text>
-            <Title level={1} style={{ marginTop: 8, marginBottom: 0, color: '#ec4899' }}>
-              {topService}
-            </Title>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Credits & Savings"
+              value={Math.abs(kpis.totalCredits) + kpis.spSavings}
+              precision={2}
+              prefix={<ArrowDownOutlined />}
+              formatter={(v) => fmt(v as number)}
+              valueStyle={{ color: '#3f8600' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Top Service"
+              value={kpis.topService ? kpis.topService[0] : '—'}
+              prefix={<CloudServerOutlined />}
+              suffix={kpis.topService ? <Text type="secondary" style={{ fontSize: 14 }}>{fmt(kpis.topService[1])}</Text> : undefined}
+            />
           </Card>
         </Col>
       </Row>
 
-      <Row gutter={[24, 24]}>
-        {/* Line Chart */}
-        <Col xs={24} lg={16}>
-          <Card 
-            title="Daily Spend Trend" 
-            bordered={false}
-            style={{ 
-              borderRadius: token.borderRadiusLG,
-              boxShadow: token.boxShadowTertiary,
-              height: '100%'
-            }}
-            bodyStyle={{ padding: '24px 0 0 0' }}
+      {/* Row 2: Daily Trend + Service Breakdown */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={14}>
+          <Card
+            title="Daily Spend by Service"
+            extra={
+              <Segmented
+                size="small"
+                value={dailyChartType}
+                onChange={(v) => setDailyChartType(v as 'column' | 'line')}
+                options={[
+                  { value: 'column', icon: <BarChartOutlined /> },
+                  { value: 'line',   icon: <LineChartOutlined /> },
+                ]}
+              />
+            }
           >
-            <div style={{ width: '100%', height: 400 }}>
-              <ResponsiveContainer>
-                <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={token.colorPrimary} stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor={token.colorPrimary} stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="date" stroke={token.colorTextSecondary} />
-                  <YAxis stroke={token.colorTextSecondary} tickFormatter={(val) => `$${val}`} />
-                  <CartesianGrid strokeDasharray="3 3" stroke={token.colorBorderSecondary} vertical={false} />
-                  <RechartsTooltip 
-                    contentStyle={{ 
-                      backgroundColor: token.colorBgElevated, 
-                      borderColor: token.colorBorder,
-                      borderRadius: token.borderRadiusLG,
-                      color: token.colorText
-                    }}
-                    itemStyle={{ color: token.colorPrimary }}
-                    formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Cost']}
-                    labelFormatter={(label) => `Date: ${label}`}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="cost" 
-                    stroke={token.colorPrimary} 
-                    strokeWidth={3}
-                    fillOpacity={1} 
-                    fill="url(#colorCost)" 
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+            {dailySpendData.length > 0 ? (
+              <div style={{ height: 340 }}>
+                {dailyChartType === 'column'
+                  ? <Column {...stackedColumnConfig} />
+                  : <Line   {...lineConfig} />}
+              </div>
+            ) : <Empty description="No usage data in selected range" />}
           </Card>
         </Col>
-
-        {/* Pie Chart */}
-        <Col xs={24} lg={8}>
-          <Card 
-            title="Cost by Service" 
-            bordered={false}
-            style={{ 
-              borderRadius: token.borderRadiusLG,
-              boxShadow: token.boxShadowTertiary,
-              height: '100%'
-            }}
-          >
+        <Col xs={24} lg={10}>
+          <Card title="Cost by Service">
             {serviceData.length > 0 ? (
-              <div style={{ width: '100%', height: 400 }}>
-                <ResponsiveContainer>
-                  <PieChart>
-                    <Pie
-                      data={serviceData}
-                      cx="50%"
-                      cy="45%"
-                      innerRadius={80}
-                      outerRadius={120}
-                      paddingAngle={5}
-                      dataKey="value"
-                      stroke="none"
-                    >
-                      {serviceData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip 
-                      formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Cost']}
-                      contentStyle={{ 
-                        backgroundColor: token.colorBgElevated, 
-                        borderColor: token.colorBorder,
-                        borderRadius: token.borderRadiusLG,
-                        color: token.colorText
-                      }}
-                    />
-                    <Legend 
-                      verticalAlign="bottom" 
-                      height={36} 
-                      formatter={(value) => <span style={{ color: token.colorText }}>{value}</span>}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+              <div style={{ height: 380 }}>
+                <Bar {...serviceBarConfig} />
               </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 400 }}>
-                <Text type="secondary">No service cost data available.</Text>
+            ) : <Empty description="No service data available" />}
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Row 3: Region */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24}>
+          <Card title="Cost by Region">
+            {hasRegionData ? (
+              <div style={{ height: 280 }}>
+                <Bar {...regionBarConfig} />
               </div>
-            )}
+            ) : <Empty description="Region data not available for this client" />}
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Row 4: Cost Type + Operations Table */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={8}>
+          <Card title="Spend by Category">
+            {costTypeData.length > 0 ? (
+              <div style={{ height: 320 }}>
+                <Pie {...costTypeDonutConfig} />
+              </div>
+            ) : <Empty description="No data" />}
+          </Card>
+        </Col>
+        <Col xs={24} lg={16}>
+          <Card title="Top Operations">
+            <Table
+              dataSource={operationsTableData}
+              columns={tableColumns}
+              pagination={false}
+              size="small"
+              scroll={{ y: 280 }}
+            />
           </Card>
         </Col>
       </Row>

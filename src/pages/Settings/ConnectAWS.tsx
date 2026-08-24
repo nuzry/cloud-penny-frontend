@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Steps, Button, Typography, Card, theme, Space, Alert, message, Input } from 'antd';
 import { CloudServerOutlined, LockOutlined, CheckCircleOutlined } from '@ant-design/icons';
-import apiClient from '../../lib/apiClient';
-import { userService } from '../../api/userService';
+import { useAwsConnection, useSaveAwsConnection, useVerifyAwsConnection } from '../../hooks/useQueries';
 import PageLoader from '../../components/ui/PageLoader';
 
 const { Title, Text } = Typography;
@@ -10,47 +9,28 @@ const { Title, Text } = Typography;
 const ConnectAWS: React.FC = () => {
   const { token } = theme.useToken();
   const [current, setCurrent] = useState(0);
-  
   const [awsAccountId, setAwsAccountId] = useState('');
-  const [savingAccount, setSavingAccount] = useState(false);
-  const [verifying, setVerifying] = useState(false);
+  const [forceReconfigure, setForceReconfigure] = useState(false);
   
-  const [isAlreadyConnected, setIsAlreadyConnected] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'UNCONNECTED' | 'PENDING' | 'VERIFIED'>('UNCONNECTED');
-  const [cfUrl, setCfUrl] = useState<string>('');
-  const [initialLoading, setInitialLoading] = useState(true);
+  const { data: connData, isLoading: initialLoading } = useAwsConnection();
+  const saveAwsConnection = useSaveAwsConnection();
+  const verifyAwsConnection = useVerifyAwsConnection();
 
+  const isAlreadyConnected = connData?.connectionStatus === 'VERIFIED' && !forceReconfigure;
+  const connectionStatus = connData?.connectionStatus || 'UNCONNECTED';
+  const cfUrl = connData?.cfUrl || '';
+
+  // Synchronize state from fetched data once
   useEffect(() => {
-    const checkStatus = async () => {
-      try {
-        await userService.getCurrentUser();
-        
-        try {
-          const connRes = await apiClient.get('/v1/aws-connection');
-          const data = connRes.data.data;
-          
-          if (data?.awsAccountId) {
-            setAwsAccountId(data.awsAccountId);
-            setConnectionStatus(data.connectionStatus);
-            
-            if (data.connectionStatus === 'VERIFIED') {
-              setIsAlreadyConnected(true);
-            } else if (data.connectionStatus === 'PENDING') {
-              if (data.cfUrl) setCfUrl(data.cfUrl);
-              setCurrent(1); // Skip to instructions if pending
-            }
-          }
-        } catch (err) {
-          console.error("No existing connection found.", err);
-        }
-      } catch (error) {
-        console.error('Failed to fetch user profile:', error);
-      } finally {
-        setInitialLoading(false);
+    if (connData) {
+      if (connData.awsAccountId && !awsAccountId) {
+        setAwsAccountId(connData.awsAccountId);
       }
-    };
-    checkStatus();
-  }, []);
+      if (connData.connectionStatus === 'PENDING' && current === 0) {
+        setCurrent(1);
+      }
+    }
+  }, [connData, awsAccountId, current]);
 
   const handleSaveAccount = async () => {
     if (!awsAccountId || awsAccountId.length !== 12 || !/^\d+$/.test(awsAccountId)) {
@@ -58,40 +38,28 @@ const ConnectAWS: React.FC = () => {
       return;
     }
     
-    setSavingAccount(true);
     try {
-      const res = await apiClient.post('/v1/aws-connection', { awsAccountId });
-      const data = res.data.data;
-      setConnectionStatus(data.connectionStatus);
-      if (data.cfUrl) setCfUrl(data.cfUrl);
-      
+      await saveAwsConnection.mutateAsync(awsAccountId);
       message.success('AWS Account ID saved. Proceed to the next step.');
       next();
     } catch (error) {
       console.error('Failed to save account:', error);
       message.error((error as any).response?.data?.error || 'Failed to save account ID.');
-    } finally {
-      setSavingAccount(false);
     }
   };
 
   const verifyConnection = async () => {
-    setVerifying(true);
     try {
-      const verifyResponse = await apiClient.post('/v1/aws-connection/verify');
+      const verifyResponse = await verifyAwsConnection.mutateAsync();
       
-      if (verifyResponse.data?.data?.connectionStatus === 'VERIFIED') {
-        setIsAlreadyConnected(true);
-        setConnectionStatus('VERIFIED');
+      if (verifyResponse?.data?.connectionStatus === 'VERIFIED') {
         message.success('AWS Account successfully connected and data received!');
       } else {
-        message.info(verifyResponse.data.error || 'No data received yet. This can take up to 24 hours. Check back later.');
+        message.info(verifyResponse?.error || 'No data received yet. This can take up to 24 hours. Check back later.');
       }
     } catch (error) {
       console.error('Failed to verify connection:', error);
       message.error((error as any).response?.data?.error || 'Failed to verify connection.');
-    } finally {
-      setVerifying(false);
     }
   };
 
@@ -192,7 +160,7 @@ const ConnectAWS: React.FC = () => {
           Your AWS environment is successfully delivering data to Cloud Penny.
         </Text>
         <Button size="large" onClick={() => {
-          setIsAlreadyConnected(false);
+          setForceReconfigure(true);
           setCurrent(0);
         }}>
           Reconfigure Connection
@@ -225,12 +193,12 @@ const ConnectAWS: React.FC = () => {
         <div style={{ marginTop: token.marginXL, display: 'flex', justifyContent: 'flex-end', borderTop: `1px solid ${token.colorSplit}`, paddingTop: token.paddingLG }}>
           <Space>
             {current > 0 && (
-              <Button onClick={() => prev()} disabled={verifying}>
+              <Button onClick={() => prev()} disabled={verifyAwsConnection.isPending}>
                 Previous
               </Button>
             )}
             {current === 0 && (
-              <Button type="primary" onClick={handleSaveAccount} loading={savingAccount} disabled={!awsAccountId}>
+              <Button type="primary" onClick={handleSaveAccount} loading={saveAwsConnection.isPending} disabled={!awsAccountId}>
                 Save & Continue
               </Button>
             )}
@@ -240,7 +208,7 @@ const ConnectAWS: React.FC = () => {
               </Button>
             )}
             {current === steps.length - 1 && (
-              <Button type="primary" onClick={verifyConnection} loading={verifying}>
+              <Button type="primary" onClick={verifyConnection} loading={verifyAwsConnection.isPending}>
                 Check Delivery Status
               </Button>
             )}

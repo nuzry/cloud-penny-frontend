@@ -93,6 +93,11 @@ export const AppLayout: React.FC = () => {
         theme={mode}
         style={{
           borderRight: `1px solid ${token.colorBorderSecondary}`,
+          position: 'sticky',
+          top: 0,
+          left: 0,
+          height: '100vh',
+          overflow: 'auto',
         }}
       >
         <Flex 
@@ -245,7 +250,7 @@ export const AppLayout: React.FC = () => {
             background: 'transparent',
             borderRadius: 0,
             boxShadow: 'none',
-            overflow: 'initial',
+            overflow: 'auto',
             display: 'flex',
             flexDirection: 'column',
           }}
