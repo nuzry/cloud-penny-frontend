@@ -71,6 +71,32 @@ export const exchangeCodeForTokens = async (code: string): Promise<CognitoTokenR
   return response.json();
 };
 
+export const refreshTokens = async (refreshToken: string): Promise<CognitoTokenResponse> => {
+  const config = getCognitoConfig();
+  const tokenEndpoint = `https://${config.domain}/oauth2/token`;
+
+  const params = new URLSearchParams({
+    grant_type: 'refresh_token',
+    client_id: config.clientId,
+    refresh_token: refreshToken,
+  });
+
+  const response = await fetch(tokenEndpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: params.toString(),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Token refresh failed: ${errorText}`);
+  }
+
+  return response.json();
+};
+
 export const parseJwt = (token: string): AuthUser | null => {
   try {
     const base64Url = token.split('.')[1];
