@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Typography, Alert, Button, theme, Space, Divider, Row, Col } from 'antd';
-import { CloudServerOutlined, IdcardOutlined, MailOutlined, SafetyCertificateOutlined, CalendarOutlined, CheckCircleOutlined, ExclamationCircleOutlined, LockOutlined } from '@ant-design/icons';
+import { CloudServerOutlined, IdcardOutlined, MailOutlined, SafetyCertificateOutlined, CalendarOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { userService } from '../../api/userService';
 import type { ClientProfile } from '../../api/userService';
 import PageLoader from '../../components/ui/PageLoader';
@@ -116,17 +116,7 @@ const ProfilePage: React.FC = () => {
                 <CloudServerOutlined style={{ fontSize: 20, color: token.colorInfo, marginTop: 4 }} />
                 <div>
                   <Text type="secondary" style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 }}>AWS Account ID</Text>
-                  <Text copyable style={{ fontSize: 16 }}>{profile.roleArn ? profile.roleArn.split(':')[4] : 'Not Connected'}</Text>
-                </div>
-              </Space>
-            </Col>
-
-            <Col span={24}>
-              <Space align="start">
-                <LockOutlined style={{ fontSize: 20, color: token.colorInfo, marginTop: 4 }} />
-                <div>
-                  <Text type="secondary" style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 }}>IAM Cross-Account Role ARN</Text>
-                  <Text copyable style={{ fontSize: 14, fontFamily: 'monospace' }}>{profile.roleArn || 'Not Connected'}</Text>
+                  <Text copyable style={{ fontSize: 16 }}>{profile.awsAccountId || 'Not Connected'}</Text>
                 </div>
               </Space>
             </Col>

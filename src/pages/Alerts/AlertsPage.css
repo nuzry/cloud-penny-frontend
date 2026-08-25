@@ -1,0 +1,13 @@
+.alert-card {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transform: translateY(0);
+}
+
+.alert-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08) !important;
+}
+
+.ant-timeline-item-tail {
+  border-inline-start-color: #f0f0f0 !important;
+}
