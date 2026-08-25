@@ -16,6 +16,7 @@ export interface ClientProfile {
   tenantId: string;
   email: string;
   planTier: string;
+  awsAccountId?: string;
   externalId?: string;
   roleArn?: string;
   connectionStatus?: string;
