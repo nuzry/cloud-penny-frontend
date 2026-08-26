@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, Input, Button, List, Typography, Avatar, Flex, theme, Space } from 'antd';
 import { SendOutlined, CloseOutlined, UserOutlined, ExpandAltOutlined, ShrinkOutlined } from '@ant-design/icons';
-import { aiService, ChatMessage } from '../../api/aiService';
+import { aiService, type ChatMessage } from '../../api/aiService';
 
 interface Message {
   id: string;
