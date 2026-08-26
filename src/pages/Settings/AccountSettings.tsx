@@ -69,6 +69,26 @@ const AccountSettings: React.FC = () => {
           borderRadius: token.borderRadiusLG,
           overflow: 'hidden'
         }}>
+          <Flex justify="space-between" align="center" style={{ padding: token.padding, borderBottom: `1px solid ${token.colorSplit}` }}>
+            <Flex vertical>
+              <Typography.Text strong>Delete AWS CloudFormation Stack</Typography.Text>
+              <Typography.Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
+                Remove the AWS resources created by Cloud Penny from your AWS account.
+              </Typography.Text>
+            </Flex>
+            <Button
+              type="primary"
+              danger
+              onClick={() => {
+                const shortId = user?.sub?.substring(0, 8) || '';
+                const stackName = shortId ? `CloudPenny-Export-${shortId}` : '';
+                window.open(`https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks?filteringText=${stackName}`, '_blank');
+              }}
+            >
+              Open AWS Console
+            </Button>
+          </Flex>
+
           <Flex justify="space-between" align="center" style={{ padding: token.padding }}>
             <Flex vertical>
               <Typography.Text strong>Delete this account</Typography.Text>
