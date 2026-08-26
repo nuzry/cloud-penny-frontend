@@ -81,13 +81,14 @@ export const ChatBotButton: React.FC = () => {
     }
   }, [messages, isOpen, isTyping]);
 
-  const handleSend = async () => {
-    if (!inputValue.trim()) return;
+  const handleSend = async (textOverride?: string | React.MouseEvent | React.KeyboardEvent) => {
+    // If called from an event (like Enter key), textOverride is an event object
+    const text = typeof textOverride === 'string' ? textOverride : inputValue.trim();
+    if (!text) return;
 
-    const userText = inputValue.trim();
     const newUserMsg: Message = {
       id: Date.now().toString(),
-      text: userText,
+      text: text,
       sender: 'user',
       timestamp: new Date()
     };
@@ -99,7 +100,7 @@ export const ChatBotButton: React.FC = () => {
     setIsTyping(true);
 
     try {
-      const replyText = await aiService.sendMessage(userText, currentHistory);
+      const replyText = await aiService.sendMessage(text, currentHistory);
       const newBotMsg: Message = {
         id: (Date.now() + 1).toString(),
         text: replyText,
@@ -215,6 +216,16 @@ export const ChatBotButton: React.FC = () => {
                   }}>
                     <Typography.Text type="secondary" className="typing-indicator">typing...</Typography.Text>
                   </div>
+                </Flex>
+              </div>
+            )}
+            {messages.length === 1 && !isTyping && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>Suggested questions:</Typography.Text>
+                <Flex wrap="wrap" gap="small">
+                  <Button size="small" style={{ borderRadius: 16 }} onClick={() => handleSend('What was my total AWS spend last month?')}>Total spend last month?</Button>
+                  <Button size="small" style={{ borderRadius: 16 }} onClick={() => handleSend('Can you break down my costs by service?')}>Cost by service?</Button>
+                  <Button size="small" style={{ borderRadius: 16 }} onClick={() => handleSend('What were my top cost drivers recently?')}>Top cost drivers?</Button>
                 </Flex>
               </div>
             )}
