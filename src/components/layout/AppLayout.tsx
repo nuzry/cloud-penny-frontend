@@ -21,6 +21,8 @@ import { useTheme } from '../../app/providers';
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
 
+import { ChatBotButton } from '../ui/ChatBotButton';
+
 export const AppLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const { token } = theme.useToken();
@@ -259,6 +261,7 @@ export const AppLayout: React.FC = () => {
           <Outlet />
         </Content>
       </Layout>
+      <ChatBotButton />
     </Layout>
   );
 };

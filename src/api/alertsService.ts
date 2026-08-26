@@ -1,4 +1,4 @@
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 
 export interface AlertMessage {
   monitorArn?: string;
@@ -33,14 +33,9 @@ export interface Alert {
   status: 'UNREAD' | 'READ';
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 export const alertsService = {
   getAlerts: async (): Promise<Alert[]> => {
-    const token = localStorage.getItem('token');
-    const response = await axios.get(`${API_BASE_URL}/api/v1/alerts`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const response = await apiClient.get('/v1/alerts');
     return response.data.data;
   }
 };

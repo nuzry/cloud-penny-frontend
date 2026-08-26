@@ -60,7 +60,6 @@ const AlertsPage: React.FC = () => {
             bodyStyle={{ padding: 0 }}
           >
             <div style={{ 
-              background: impact > 100 ? 'linear-gradient(90deg, #fff1f0 0%, #ffffff 100%)' : 'linear-gradient(90deg, #fff7e6 0%, #ffffff 100%)',
               padding: '16px 24px',
               borderLeft: `4px solid ${impact > 100 ? token.colorError : token.colorWarning}`
             }}>
