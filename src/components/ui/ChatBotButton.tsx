@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-
-import { Card, Input, Button, List, Typography, Avatar, Flex, theme } from 'antd';
-import { SendOutlined, CloseOutlined, UserOutlined } from '@ant-design/icons';
+import { Card, Input, Button, List, Typography, Avatar, Flex, theme, Space } from 'antd';
+import { SendOutlined, CloseOutlined, UserOutlined, ExpandAltOutlined, ShrinkOutlined } from '@ant-design/icons';
+import { aiService, ChatMessage } from '../../api/aiService';
 
 interface Message {
   id: string;
   text: string;
-  sender: 'user' | 'bot';
+  sender: 'user' | 'assistant';
   timestamp: Date;
 }
 
@@ -54,6 +54,7 @@ const BotFace: React.FC<{ size?: number }> = ({ size = 28 }) => {
 export const ChatBotButton: React.FC = () => {
   const { token } = theme.useToken();
   const [isOpen, setIsOpen] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -62,12 +63,11 @@ export const ChatBotButton: React.FC = () => {
     {
       id: '1',
       text: 'Hello! I am your Cloud Penny assistant. How can I help you manage your AWS costs today?',
-      sender: 'bot',
+      sender: 'assistant',
       timestamp: new Date()
     }
   ]);
 
-  // Vibrant purple for both themes
   const bgColor = '#8b5cf6'; 
   const eyeColor = '#ffffff';
 
@@ -79,46 +79,58 @@ export const ChatBotButton: React.FC = () => {
     if (isOpen) {
       scrollToBottom();
     }
-  }, [messages, isOpen]);
+  }, [messages, isOpen, isTyping]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!inputValue.trim()) return;
 
+    const userText = inputValue.trim();
     const newUserMsg: Message = {
       id: Date.now().toString(),
-      text: inputValue.trim(),
+      text: userText,
       sender: 'user',
       timestamp: new Date()
     };
 
+    const currentHistory = messages.slice(1).map(m => ({ sender: m.sender, text: m.text } as ChatMessage));
+    
     setMessages(prev => [...prev, newUserMsg]);
     setInputValue('');
     setIsTyping(true);
 
-    // Simulate bot response
-    setTimeout(() => {
+    try {
+      const replyText = await aiService.sendMessage(userText, currentHistory);
       const newBotMsg: Message = {
         id: (Date.now() + 1).toString(),
-        text: "I'm a demo assistant! In the future, I'll be able to analyze your billing data and answer that.",
-        sender: 'bot',
+        text: replyText,
+        sender: 'assistant',
         timestamp: new Date()
       };
       setMessages(prev => [...prev, newBotMsg]);
+    } catch (error) {
+      const errorMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "**Error:** I am having trouble connecting to the server. Please try again later.",
+        sender: 'assistant',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMsg]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   return (
     <>
-      {/* Chat Window Popup */}
       <div 
         style={{
           position: 'fixed',
           bottom: isOpen ? 100 : 24,
           right: 24,
           zIndex: 9998,
-          width: 350,
-          height: 500,
+          width: isMaximized ? 800 : 350,
+          height: isMaximized ? '80vh' : 500,
+          maxWidth: 'calc(100vw - 48px)',
           opacity: isOpen ? 1 : 0,
           transform: isOpen ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.9)',
           pointerEvents: isOpen ? 'auto' : 'none',
@@ -133,11 +145,18 @@ export const ChatBotButton: React.FC = () => {
             </Flex>
           }
           extra={
-            <Button 
-              type="text" 
-              icon={<CloseOutlined />} 
-              onClick={() => setIsOpen(false)} 
-            />
+            <Space>
+              <Button 
+                type="text" 
+                icon={isMaximized ? <ShrinkOutlined /> : <ExpandAltOutlined />} 
+                onClick={() => setIsMaximized(!isMaximized)} 
+              />
+              <Button 
+                type="text" 
+                icon={<CloseOutlined />} 
+                onClick={() => setIsOpen(false)} 
+              />
+            </Space>
           }
           style={{ height: '100%', display: 'flex', flexDirection: 'column', boxShadow: token.boxShadowSecondary }}
           bodyStyle={{ flex: 1, padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
@@ -148,7 +167,7 @@ export const ChatBotButton: React.FC = () => {
             <List
               dataSource={messages}
               renderItem={(msg) => {
-                const isBot = msg.sender === 'bot';
+                const isBot = msg.sender === 'assistant';
                 return (
                   <div style={{ 
                     display: 'flex', 
