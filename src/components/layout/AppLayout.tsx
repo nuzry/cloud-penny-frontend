@@ -78,7 +78,12 @@ export const AppLayout: React.FC = () => {
   const pageTitle = menuItems.find(item => item.key === selectedKey)?.label ?? '';
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    // Bounded to exactly the viewport (not just "at least") so Content's own
+    // overflow:auto below is what scrolls a tall page, instead of the whole
+    // shell growing past 100vh and letting the browser window scroll it —
+    // that's what let ContactPage's chat card push its input off-screen,
+    // since nothing above it was actually capping available height.
+    <Layout style={{ height: '100vh' }}>
       <Sider 
         trigger={null} 
         collapsible 
