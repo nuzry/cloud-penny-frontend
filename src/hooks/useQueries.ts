@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../lib/apiClient';
+import { alertsService } from '../api/alertsService';
+import type { Alert } from '../api/alertsService';
 
 // --- Dashboard Queries ---
 
@@ -96,7 +98,7 @@ export const useClientMe = () => {
 
 export const useUpdateClientMe = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (payload: any) => {
       const { data } = await apiClient.put('/v1/clients/me', payload); // DataRefreshSettings uses PUT
@@ -105,5 +107,22 @@ export const useUpdateClientMe = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['client-me'] });
     },
+  });
+};
+
+export const useDeleteClientMe = () => {
+  return useMutation({
+    mutationFn: async () => {
+      await apiClient.delete('/v1/clients/me');
+    },
+  });
+};
+
+// --- Alerts Queries ---
+
+export const useAlerts = () => {
+  return useQuery({
+    queryKey: ['alerts'],
+    queryFn: (): Promise<Alert[]> => alertsService.getAlerts(),
   });
 };

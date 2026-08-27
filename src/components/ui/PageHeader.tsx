@@ -8,11 +8,13 @@ interface PageHeaderProps {
   extra?: React.ReactNode;
 }
 
+// No margin of its own — every page already spaces its children via a
+// parent Flex `gap`, so this just renders the header row itself.
 const PageHeader: React.FC<PageHeaderProps> = ({ title, icon, description, extra }) => {
   return (
-    <Flex justify="space-between" align="center" style={{ marginBottom: 24 }}>
+    <Flex justify="space-between" align="center" wrap="wrap" gap={16}>
       <Flex vertical>
-        <Typography.Title level={2} style={{ margin: 0 }}>
+        <Typography.Title level={3} style={{ margin: 0 }}>
           {icon && <span style={{ marginRight: 8 }}>{icon}</span>}
           {title}
         </Typography.Title>

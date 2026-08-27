@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Typography, Flex, Button, Modal, Input, message, theme, Alert } from 'antd';
-import { userService } from '../../api/userService';
+import { useDeleteClientMe } from '../../hooks/useQueries';
 import { useAuth } from '../../features/auth/AuthContext';
 import { getCognitoLogoutUrl } from '../../features/auth/api/cognito';
 
@@ -8,8 +8,9 @@ const AccountSettings: React.FC = () => {
   const { token } = theme.useToken();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
   const { clearSession, user } = useAuth();
+  const deleteClientMe = useDeleteClientMe();
+  const isDeleting = deleteClientMe.isPending;
 
   const confirmText = user?.email || 'delete my account';
 
@@ -30,13 +31,11 @@ const AccountSettings: React.FC = () => {
     }
 
     try {
-      setIsDeleting(true);
-
       // Step 1: Fire the DELETE API call FIRST and await it fully.
       // We must NOT call logout() before this — logout() triggers
       // window.location.assign() which navigates the browser away and
       // aborts all in-flight network requests before the API responds.
-      await userService.deleteCurrentUser();
+      await deleteClientMe.mutateAsync();
 
       // Step 2: API succeeded — now clear the local session state.
       clearSession();
@@ -53,8 +52,6 @@ const AccountSettings: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to delete account:', error);
       message.error(error?.response?.data?.message || 'Failed to delete account. Please try again.');
-    } finally {
-      setIsDeleting(false);
     }
   };
 

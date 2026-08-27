@@ -1,43 +1,20 @@
-import React, { useEffect, useState } from 'react';
-import { Typography, Card, Flex, theme, Spin, Timeline, Tag, Space, Empty, Button, Divider } from 'antd';
+import React from 'react';
+import { Card, Flex, theme, Timeline, Tag, Space, Empty, Button, Divider, Typography } from 'antd';
 import { WarningOutlined, ReloadOutlined, ExperimentOutlined, RiseOutlined } from '@ant-design/icons';
-import { alertsService } from '../../api/alertsService';
+import { useAlerts } from '../../hooks/useQueries';
 import type { Alert } from '../../api/alertsService';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import './AlertsPage.css';
-
-dayjs.extend(relativeTime);
+import PageHeader from '../../components/ui/PageHeader';
+import PageLoader from '../../components/ui/PageLoader';
+import { formatCurrency, formatRelativeTime } from '../../utils/format';
 
 const { Title, Text } = Typography;
 
 const AlertsPage: React.FC = () => {
   const { token } = theme.useToken();
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchAlerts = async () => {
-    setLoading(true);
-    try {
-      const data = await alertsService.getAlerts();
-      setAlerts(data || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchAlerts();
-  }, []);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
-  };
+  const { data: alerts = [], isLoading, isFetching, refetch } = useAlerts();
 
   const getTimelineItems = () => {
-    return alerts.map((alert) => {
+    return alerts.map((alert: Alert) => {
       const anomaly = alert.message.anomalies?.[0];
       const impact = anomaly?.impact?.totalImpact ?? 0;
       const expected = anomaly?.impact?.totalExpectedSpend ?? 0;
@@ -48,18 +25,17 @@ const AlertsPage: React.FC = () => {
         color: impact > 100 ? 'red' : 'orange',
         dot: <WarningOutlined style={{ fontSize: '18px' }} />,
         children: (
-          <Card 
-            className="alert-card"
-            bordered={false} 
-            style={{ 
-              boxShadow: token.boxShadowTertiary, 
+          <Card
+            bordered={false}
+            style={{
+              boxShadow: token.boxShadowTertiary,
               borderRadius: token.borderRadiusLG,
               marginBottom: 24,
               overflow: 'hidden'
             }}
             bodyStyle={{ padding: 0 }}
           >
-            <div style={{ 
+            <div style={{
               padding: '16px 24px',
               borderLeft: `4px solid ${impact > 100 ? token.colorError : token.colorWarning}`
             }}>
@@ -67,7 +43,7 @@ const AlertsPage: React.FC = () => {
                 <Flex vertical gap="small">
                   <Space>
                     <Tag color={impact > 100 ? 'error' : 'warning'}>Cost Anomaly</Tag>
-                    <Text type="secondary">{dayjs(alert.createdAt).fromNow()}</Text>
+                    <Text type="secondary">{formatRelativeTime(alert.createdAt)}</Text>
                   </Space>
                   <Title level={4} style={{ margin: 0, marginTop: 8 }}>
                     Spike detected in {service}
@@ -104,24 +80,18 @@ const AlertsPage: React.FC = () => {
 
   return (
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <Flex justify="space-between" align="center" wrap="wrap" gap={16}>
-        <div>
-          <Title level={3} style={{ margin: 0 }}>Alerts</Title>
-          <Text type="secondary">Monitor anomalous spending and unusual cost spikes.</Text>
-        </div>
-        <Button 
-          icon={<ReloadOutlined />} 
-          onClick={fetchAlerts}
-          loading={loading}
-        >
-          Refresh
-        </Button>
-      </Flex>
+      <PageHeader
+        title="Alerts"
+        description="Monitor anomalous spending and unusual cost spikes."
+        extra={
+          <Button icon={<ReloadOutlined />} onClick={() => refetch()} loading={isFetching}>
+            Refresh
+          </Button>
+        }
+      />
 
-      {loading && alerts.length === 0 ? (
-        <Flex justify="center" align="center" style={{ minHeight: 400 }}>
-          <Spin size="large" />
-        </Flex>
+      {isLoading ? (
+        <PageLoader height={400} />
       ) : alerts.length === 0 ? (
         <Card bordered={false} style={{ boxShadow: token.boxShadowTertiary, borderRadius: token.borderRadiusLG }}>
           <Empty

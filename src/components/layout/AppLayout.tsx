@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layout, Button, theme, Flex, Typography, Dropdown, Avatar } from 'antd';
+import { Layout, Menu, Button, theme, Flex, Typography, Dropdown, Avatar } from 'antd';
 import {
   BarChartOutlined,
   CloudOutlined,
@@ -17,11 +17,10 @@ import {
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../features/auth';
 import { useTheme } from '../../app/providers';
+import { ChatBotButton } from '../../features/chat';
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
-
-import { ChatBotButton } from '../ui/ChatBotButton';
 
 export const AppLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
@@ -73,18 +72,10 @@ export const AppLayout: React.FC = () => {
     },
   ];
 
-  // Map pathname to Page Title
-  const getPageTitle = (path: string) => {
-    switch (path) {
-      case '/dashboard': return 'Dashboard';
-      case '/export': return 'Export';
-      case '/alerts': return 'Alerts';
-      case '/settings': return 'Settings';
-      case '/profile': return 'Profile';
-      case '/contact': return 'Contact';
-      default: return '';
-    }
-  };
+  // Reuses menuItems (rather than a second hardcoded path→label map) so the
+  // sidebar and the header title can never drift out of sync with each other.
+  const selectedKey = menuItems.find(item => location.pathname.startsWith(item.key))?.key;
+  const pageTitle = menuItems.find(item => item.key === selectedKey)?.label ?? '';
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -120,77 +111,14 @@ export const AppLayout: React.FC = () => {
           )}
         </Flex>
 
-        <Flex vertical gap={4} style={{ padding: collapsed ? '12px 8px' : '12px 16px' }}>
-          {menuItems.map(item => {
-            const isSelected = location.pathname.startsWith(item.key);
-            return (
-              <div
-                key={item.key}
-                onClick={() => navigate(item.key)}
-                style={{
-                  position: 'relative',
-                  padding: collapsed ? '10px 0' : '10px 16px',
-                  justifyContent: collapsed ? 'center' : 'flex-start',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  backgroundColor: isSelected ? token.colorFillSecondary : 'transparent',
-                  transition: 'background-color 0.2s',
-                  userSelect: 'none',
-                  whiteSpace: 'nowrap'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSelected) e.currentTarget.style.backgroundColor = token.colorFillTertiary;
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
-                }}
-                title={collapsed ? item.label : undefined}
-              >
-                {/* Active Indicator Bar */}
-                {isSelected && (
-                  <div 
-                    style={{ 
-                      position: 'absolute', 
-                      left: 0, 
-                      top: '50%', 
-                      transform: 'translateY(-50%)', 
-                      width: 4, 
-                      height: '60%', 
-                      backgroundColor: token.colorPrimary, 
-                      borderRadius: 4 
-                    }} 
-                  />
-                )}
-                
-                {/* Icon */}
-                <div style={{ 
-                  color: isSelected ? token.colorText : token.colorTextSecondary,
-                  fontSize: 16,
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                  {item.icon}
-                </div>
-
-                {/* Label */}
-                {!collapsed && (
-                  <Typography.Text 
-                    style={{ 
-                      color: isSelected ? token.colorText : token.colorTextSecondary,
-                      fontWeight: 500,
-                      fontSize: 14
-                    }}
-                  >
-                    {item.label}
-                  </Typography.Text>
-                )}
-              </div>
-            );
-          })}
-        </Flex>
+        <Menu
+          mode="inline"
+          theme={mode}
+          selectedKeys={selectedKey ? [selectedKey] : []}
+          items={menuItems}
+          onClick={({ key }) => navigate(key)}
+          style={{ borderInlineEnd: 'none' }}
+        />
       </Sider>
       
       <Layout>
@@ -218,7 +146,7 @@ export const AppLayout: React.FC = () => {
             />
             {/* Dynamic Page Title in the Header */}
             <Typography.Title level={4} style={{ margin: 0, fontWeight: 600 }}>
-              {getPageTitle(location.pathname)}
+              {pageTitle}
             </Typography.Title>
           </Flex>
           
