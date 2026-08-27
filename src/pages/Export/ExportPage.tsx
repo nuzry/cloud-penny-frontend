@@ -1,27 +1,18 @@
 import React from 'react';
 import {
   Typography, Card, Table, Button, Tooltip, Progress, Empty,
-  Spin, Flex, theme, Badge, Statistic,
+  Flex, theme, Badge, Statistic,
 } from 'antd';
 import {
   DownloadOutlined, FileExcelOutlined, ClockCircleOutlined,
   CheckCircleOutlined, WarningOutlined, ReloadOutlined,
 } from '@ant-design/icons';
 import { useExportFiles, useClientMe } from '../../hooks/useQueries';
+import PageHeader from '../../components/ui/PageHeader';
+import PageLoader from '../../components/ui/PageLoader';
+import { formatFileSize as fmtSize, formatDateTime as fmtDate } from '../../utils/format';
 
-const { Title, Text } = Typography;
-
-const fmtSize = (bytes: number) => {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
-
-const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleString('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  });
+const { Text } = Typography;
 
 const ExportPage: React.FC = () => {
   const { token } = theme.useToken();
@@ -142,22 +133,15 @@ const ExportPage: React.FC = () => {
 
   return (
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Header */}
-      <Flex justify="space-between" align="center" wrap="wrap" gap={16}>
-        <div>
-          <Title level={3} style={{ margin: 0 }}>Data Exports</Title>
-          <Text type="secondary">
-            Athena query results saved as CSV · Auto-deleted after 7 days
-          </Text>
-        </div>
-        <Button
-          icon={<ReloadOutlined />}
-          onClick={() => refetch()}
-          loading={isFetching}
-        >
-          Refresh
-        </Button>
-      </Flex>
+      <PageHeader
+        title="Data Exports"
+        description="Athena query results saved as CSV · Auto-deleted after 7 days"
+        extra={
+          <Button icon={<ReloadOutlined />} onClick={() => refetch()} loading={isFetching}>
+            Refresh
+          </Button>
+        }
+      />
 
       {/* Summary KPIs */}
       {files.length > 0 && (
@@ -206,9 +190,7 @@ const ExportPage: React.FC = () => {
         styles={{ body: { padding: 0 } }}
       >
         {isLoading ? (
-          <Flex justify="center" align="center" style={{ height: 200 }}>
-            <Spin size="large" />
-          </Flex>
+          <PageLoader height={200} />
         ) : enriched.length === 0 ? (
           <Empty
             style={{ padding: 60 }}

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Typography, Card, Row, Col, Statistic, Select, Segmented, Table, Tag, Empty, Spin, Flex, theme, Button, DatePicker,
+  Typography, Card, Row, Col, Statistic, Select, Segmented, Table, Tag, Empty, Flex, theme, Button, DatePicker,
 } from 'antd';
 import {
   ArrowUpOutlined, ArrowDownOutlined, DollarOutlined,
@@ -10,17 +10,16 @@ import { Column, Bar, Pie, Line } from '@ant-design/plots';
 import { useTheme } from '../../app/providers';
 import { useNavigate } from 'react-router-dom';
 import { useDashboardData, useClientMe } from '../../hooks/useQueries';
+import PageHeader from '../../components/ui/PageHeader';
+import PageLoader from '../../components/ui/PageLoader';
+import { formatCurrency, formatCompactCurrency } from '../../utils/format';
 
 const { Title, Text } = Typography;
 
-// ─── Types matching exact Athena output shape ───────────────────────────────
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-const fmt = (val: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 6 }).format(val);
-const fmtCompact = (v: number) => {
-  if (Math.abs(v) >= 1000) return `$${(v / 1000).toFixed(1)}k`;
-  return fmt(v);
-};
+// Dashboard costs can be fractions of a cent (e.g. per-request charges), so
+// this needs more precision than the default 2dp currency formatting.
+const fmt = (val: number) => formatCurrency(val, 6);
+const fmtCompact = formatCompactCurrency;
 
 export const Dashboard: React.FC = () => {
   const { data: profile, isLoading: isProfileLoading } = useClientMe();
@@ -166,7 +165,7 @@ export const Dashboard: React.FC = () => {
   // ── Chart click interaction ─────────────────────────────────────────────
 
 
-  if (loading) return <Flex justify="center" align="center" style={{ height: '60vh' }}><Spin size="large" /></Flex>;
+  if (loading) return <PageLoader height="60vh" />;
 
   // ── Dark-mode aware chart theme ─────────────────────────────────────────
   const textColor = isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)';
@@ -286,14 +285,11 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Header */}
-      <Flex justify="space-between" align="center" wrap="wrap" gap={16}>
-        <div>
-          <Title level={3} style={{ margin: 0 }}>Cost & Usage Dashboard</Title>
-          <Text type="secondary">AWS Cloud Cost Analytics • {kpis.daysPassed}-day view</Text>
-        </div>
-        <Tag color="green">Live Data Connected</Tag>
-      </Flex>
+      <PageHeader
+        title="Cost & Usage Dashboard"
+        description={`AWS Cloud Cost Analytics • ${kpis.daysPassed}-day view`}
+        extra={<Tag color="green">Live Data Connected</Tag>}
+      />
 
       {/* Filters */}
       <Card size="small">

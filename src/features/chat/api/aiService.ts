@@ -1,4 +1,4 @@
-import apiClient from '../lib/apiClient';
+import apiClient from '../../../lib/apiClient';
 
 export interface ChatMessage {
   sender: 'user' | 'assistant';

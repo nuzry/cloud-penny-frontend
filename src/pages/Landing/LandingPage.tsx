@@ -152,86 +152,83 @@ export const LandingPage: React.FC = () => {
             </Paragraph>
           </Flex>
 
+          {/* Errors */}
+          {displayError && (
+            <Flex vertical gap={token.marginSM} style={{ width: '100%' }}>
+              <Alert
+                message={`Error: ${displayError.error}`}
+                description={
+                  <Flex vertical gap={token.marginXXS}>
+                    <Text type="secondary" style={{ fontSize: token.fontSizeSM - 1 }}>
+                      {displayError.description}
+                    </Text>
+                  </Flex>
+                }
+                type="error"
+                showIcon
+                icon={<ExclamationCircleOutlined />}
+              />
+              <Button type="primary" block onClick={handleCognitoLogin}>
+                Retry Login
+              </Button>
+              <Button type="default" block onClick={handleDismissError}>
+                Dismiss
+              </Button>
+            </Flex>
+          )}
 
-              {/* Errors */}
-              {displayError && (
-                <Flex vertical gap={token.marginSM} style={{ width: '100%' }}>
-                  <Alert
-                    message={`Error: ${displayError.error}`}
-                    description={
-                      <Flex vertical gap={token.marginXXS}>
+          {/* Default State: 3 Key Features & Login Button */}
+          {!isAuthenticated && !displayError && (
+            <>
+              <List
+                itemLayout="horizontal"
+                dataSource={features}
+                style={{ width: '100%', marginTop: token.marginXS }}
+                renderItem={(item) => (
+                  <List.Item style={{ padding: `${token.paddingSM}px 0`, borderBottom: `1px solid ${token.colorBorderSecondary}` }}>
+                    <List.Item.Meta
+                      avatar={
+                        <Flex
+                          align="center"
+                          justify="center"
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: token.borderRadius,
+                            backgroundColor: token.colorPrimaryBg,
+                          }}
+                        >
+                          {item.icon}
+                        </Flex>
+                      }
+                      title={<Text style={{ fontWeight: 600, fontSize: token.fontSize }}>{item.title}</Text>}
+                      description={
                         <Text type="secondary" style={{ fontSize: token.fontSizeSM - 1 }}>
-                          {displayError.description}
+                          {item.description}
                         </Text>
-                      </Flex>
-                    }
-                    type="error"
-                    showIcon
-                    icon={<ExclamationCircleOutlined />}
-                  />
-                  <Button type="primary" block onClick={handleCognitoLogin}>
-                    Retry Login
-                  </Button>
-                  <Button type="default" block onClick={handleDismissError}>
-                    Dismiss
-                  </Button>
-                </Flex>
-              )}
+                      }
+                    />
+                  </List.Item>
+                )}
+              />
 
-
-
-              {/* Default State: 3 Key Features & Login Button */}
-              {!isAuthenticated && !displayError && (
-                <>
-                  <List
-                    itemLayout="horizontal"
-                    dataSource={features}
-                    style={{ width: '100%', marginTop: token.marginXS }}
-                    renderItem={(item) => (
-                      <List.Item style={{ padding: `${token.paddingSM}px 0`, borderBottom: `1px solid ${token.colorBorderSecondary}` }}>
-                        <List.Item.Meta
-                          avatar={
-                            <Flex
-                              align="center"
-                              justify="center"
-                              style={{
-                                width: 36,
-                                height: 36,
-                                borderRadius: token.borderRadius,
-                                backgroundColor: token.colorPrimaryBg,
-                              }}
-                            >
-                              {item.icon}
-                            </Flex>
-                          }
-                          title={<Text style={{ fontWeight: 600, fontSize: token.fontSize }}>{item.title}</Text>}
-                          description={
-                            <Text type="secondary" style={{ fontSize: token.fontSizeSM - 1 }}>
-                              {item.description}
-                            </Text>
-                          }
-                        />
-                      </List.Item>
-                    )}
-                  />
-
-                  <Button
-                    type="primary"
-                    size="large"
-                    icon={<LoginOutlined />}
-                    block
-                    onClick={handleCognitoLogin}
-                    style={{
-                      height: 46,
-                      fontWeight: 600,
-                      borderRadius: token.borderRadius,
-                      marginTop: token.marginSM,
-                    }}
-                  >
-                    Sign In with AWS Cognito
-                  </Button>
-                </>
-              )}
+              <Button
+                type="primary"
+                size="large"
+                icon={<LoginOutlined />}
+                block
+                onClick={handleCognitoLogin}
+                style={{
+                  height: 46,
+                  fontWeight: 600,
+                  borderRadius: token.borderRadius,
+                  marginTop: token.marginSM,
+                }}
+              >
+                Sign In with AWS Cognito
+              </Button>
+            </>
+          )}
         </Flex>
       </Card>
     </Flex>
