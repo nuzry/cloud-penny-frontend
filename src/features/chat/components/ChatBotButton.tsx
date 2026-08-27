@@ -1,7 +1,31 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, Input, Button, List, Typography, Avatar, Flex, theme, Space } from 'antd';
 import { SendOutlined, CloseOutlined, UserOutlined, ExpandAltOutlined, ShrinkOutlined } from '@ant-design/icons';
+import ReactMarkdown from 'react-markdown';
 import { aiService, type ChatMessage } from '../api/aiService';
+
+// Penny's replies are plain Markdown text (per the system prompt: bold for
+// numbers/names, bullet lists for breakdowns) — this used to render as a raw
+// `**text**` string with literal asterisks since nothing parsed it. Margins
+// on p/ul/li are collapsed to fit a compact chat bubble instead of full-page
+// prose spacing.
+const MarkdownMessage: React.FC<{ text: string }> = ({ text }) => (
+  <ReactMarkdown
+    components={{
+      p: ({ children }) => <p style={{ margin: 0 }}>{children}</p>,
+      ul: ({ children }) => <ul style={{ margin: '4px 0', paddingLeft: 20 }}>{children}</ul>,
+      ol: ({ children }) => <ol style={{ margin: '4px 0', paddingLeft: 20 }}>{children}</ol>,
+      li: ({ children }) => <li style={{ marginBottom: 2 }}>{children}</li>,
+      a: ({ children, href }) => (
+        <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
+          {children}
+        </a>
+      ),
+    }}
+  >
+    {text}
+  </ReactMarkdown>
+);
 
 interface Message {
   id: string;
@@ -10,43 +34,44 @@ interface Message {
   timestamp: Date;
 }
 
-const BotFace: React.FC<{ size?: number }> = ({ size = 28 }) => {
-  const scale = size / 60;
+const CLOUD_COLOR = '#4f46e5'; // matches the app's colorPrimary — the same cloud mark used in the sidebar logo and landing page
+
+// Penny's mascot: a cloud silhouette (built from overlapping same-color
+// circles + a base pill, same technique as the sidebar/landing brand mark)
+// with two eyes. `animated` drives the idle blink + look-around loop and is
+// only turned on for the single prominent floating button — the small
+// per-message avatar stays static so a scrolling message list of them isn't
+// distracting.
+const CloudFace: React.FC<{ size?: number; animated?: boolean }> = ({ size = 28, animated = false }) => {
+  const s = size / 60; // design is authored at 60px, scaled proportionally for the small avatar
+  const puff = (width: number, top: number, left: number) => ({
+    position: 'absolute' as const,
+    width: width * s,
+    height: width * s,
+    left: left * s,
+    top: top * s,
+    borderRadius: '50%',
+    background: CLOUD_COLOR,
+  });
+
   return (
     <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        background: '#8b5cf6',
-        position: 'relative',
-        flexShrink: 0,
-      }}
+      className={animated ? 'cloud-face cloud-face-animated' : 'cloud-face'}
+      style={{ width: size, height: size, position: 'relative', flexShrink: 0 }}
     >
-      <div 
-        style={{
-          position: 'absolute',
-          width: 8 * scale,
-          height: 14 * scale,
-          borderRadius: 4 * scale,
-          background: '#fff',
-          transform: 'rotate(15deg)',
-          right: 24 * scale,
-          top: 22 * scale,
-        }} 
-      />
-      <div 
-        style={{
-          position: 'absolute',
-          width: 8 * scale,
-          height: 14 * scale,
-          borderRadius: 4 * scale,
-          background: '#fff',
-          transform: 'rotate(15deg)',
-          right: 12 * scale,
-          top: 22 * scale,
-        }} 
-      />
+      {/* Cloud silhouette */}
+      <div style={puff(26, 14, 2)} />
+      <div style={puff(34, 4, 16)} />
+      <div style={puff(24, 15, 34)} />
+      <div style={{ position: 'absolute', width: 44 * s, height: 22 * s, left: 8 * s, top: 26 * s, borderRadius: 11 * s, background: CLOUD_COLOR }} />
+
+      {/* Eyes */}
+      <div className="cloud-eye" style={{ width: 10 * s, height: 10 * s, left: 20 * s, top: 32 * s }}>
+        <div className="cloud-pupil" />
+      </div>
+      <div className="cloud-eye" style={{ width: 10 * s, height: 10 * s, left: 32 * s, top: 32 * s }}>
+        <div className="cloud-pupil" />
+      </div>
     </div>
   );
 };
@@ -67,9 +92,6 @@ export const ChatBotButton: React.FC = () => {
       timestamp: new Date()
     }
   ]);
-
-  const bgColor = '#8b5cf6'; 
-  const eyeColor = '#ffffff';
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -177,7 +199,7 @@ export const ChatBotButton: React.FC = () => {
                   }}>
                     <Flex gap="small" align="flex-end" style={{ maxWidth: '85%', flexDirection: isBot ? 'row' : 'row-reverse' }}>
                       {isBot ? (
-                        <BotFace size={24} />
+                        <CloudFace size={28} />
                       ) : (
                         <Avatar 
                           size="small" 
@@ -197,7 +219,7 @@ export const ChatBotButton: React.FC = () => {
                         borderBottomRightRadius: !isBot ? 4 : 16,
                         boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
                       }}>
-                        {msg.text}
+                        {isBot ? <MarkdownMessage text={msg.text} /> : msg.text}
                       </div>
                     </Flex>
                   </div>
@@ -207,7 +229,7 @@ export const ChatBotButton: React.FC = () => {
             {isTyping && (
               <div style={{ display: 'flex', marginBottom: 16 }}>
                 <Flex gap="small" align="flex-end">
-                  <BotFace size={24} />
+                  <CloudFace size={28} />
                   <div style={{
                     background: token.colorBgContainer,
                     padding: '10px 14px',
@@ -263,59 +285,60 @@ export const ChatBotButton: React.FC = () => {
           bottom: 24,
           right: 24,
           zIndex: 9999,
-          background: bgColor,
           opacity: isOpen ? 0 : 1,
           pointerEvents: isOpen ? 'none' : 'auto',
           transform: isOpen ? 'scale(0)' : 'scale(1)',
         }}
         onClick={() => setIsOpen(true)}
       >
-        <div className="chatbot-eye left" style={{ background: eyeColor }} />
-        <div className="chatbot-eye right" style={{ background: eyeColor }} />
+        <CloudFace size={60} animated />
 
         <style>
           {`
             .chatbot-button-container {
               width: 60px;
               height: 60px;
-              border-radius: 50%;
               cursor: pointer;
               position: relative;
               animation: bounce 2.5s infinite ease-in-out;
-              transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-              filter: drop-shadow(0 6px 10px rgba(0,0,0,0.2));
+              transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+              filter: drop-shadow(0 6px 10px rgba(0,0,0,0.25));
             }
-            
+
             .chatbot-button-container:hover {
               transform: scale(1.15) !important;
               animation-play-state: paused;
-              filter: drop-shadow(0 8px 15px rgba(0,0,0,0.3));
+              filter: drop-shadow(0 8px 15px rgba(0,0,0,0.35));
             }
 
-            .chatbot-eye {
+            .cloud-eye {
               position: absolute;
-              width: 8px;
-              height: 14px;
-              border-radius: 4px;
-              transform: rotate(15deg);
-              animation: look-around 10s infinite;
+              background: #ffffff;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              transition: transform 0.2s ease;
             }
 
-            .chatbot-button-container:hover .chatbot-eye {
+            .cloud-pupil {
+              width: 46%;
+              height: 46%;
+              border-radius: 50%;
+              background: #312e81;
+            }
+
+            .cloud-face-animated .cloud-eye {
+              animation: blink 4.5s infinite;
+            }
+
+            .cloud-face-animated .cloud-pupil {
+              animation: look-around 9s infinite;
+            }
+
+            .chatbot-button-container:hover .cloud-eye {
               animation: none;
-              height: 4px;
-              transform: rotate(15deg) translateY(5px);
-              transition: all 0.2s ease;
-            }
-
-            .chatbot-eye.left {
-              right: 24px;
-              top: 22px;
-            }
-
-            .chatbot-eye.right {
-              right: 12px;
-              top: 22px;
+              transform: scaleY(0.25);
             }
 
             .typing-indicator {
@@ -332,43 +355,16 @@ export const ChatBotButton: React.FC = () => {
               50% { transform: translateY(-12px); }
             }
 
+            @keyframes blink {
+              0%, 92%, 100% { transform: scaleY(1); }
+              95% { transform: scaleY(0.1); }
+            }
+
             @keyframes look-around {
-              0%, 15%, 25%, 35%, 60%, 85%, 100% {
-                transform: rotate(15deg) translate(0, 0);
-                height: 14px;
-              }
-              18% {
-                transform: rotate(15deg) translateY(5px);
-                height: 4px;
-              }
-              21% {
-                transform: rotate(15deg) translate(0, 0);
-                height: 14px;
-              }
-              40%, 45% {
-                transform: rotate(15deg) translateX(-4px);
-                height: 14px;
-              }
-              65%, 75% {
-                transform: rotate(15deg) translateX(4px);
-                height: 14px;
-              }
-              90% {
-                transform: rotate(15deg) translateY(5px);
-                height: 4px;
-              }
-              92% {
-                transform: rotate(15deg) translate(0, 0);
-                height: 14px;
-              }
-              94% {
-                transform: rotate(15deg) translateY(5px);
-                height: 4px;
-              }
-              96% {
-                transform: rotate(15deg) translate(0, 0);
-                height: 14px;
-              }
+              0%, 15%, 40%, 65%, 100% { transform: translate(0, 0); }
+              22% { transform: translate(-1.5px, 0.5px); }
+              48% { transform: translate(1.5px, 0.5px); }
+              72% { transform: translate(0, -1.5px); }
             }
           `}
         </style>
