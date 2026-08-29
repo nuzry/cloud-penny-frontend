@@ -5,7 +5,7 @@ terraform {
       version = "~> 5.0"
     }
   }
-  
+
   # For safety, as requested, you can configure an S3 backend here later:
   # backend "s3" {
   #   bucket = "cloudpenny-terraform-state"
@@ -53,6 +53,45 @@ resource "aws_cloudfront_distribution" "frontend_distribution" {
     domain_name              = aws_s3_bucket.frontend_bucket.bucket_regional_domain_name
     origin_id                = aws_s3_bucket.frontend_bucket.id
     origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
+  }
+
+  # Routes /api/* to the backend HTTP API through this same distribution so
+  # the browser sees the frontend and API as one origin. This is required
+  # for the auth session cookie: a cookie set by a genuinely separate origin
+  # (execute-api.amazonaws.com) is a third-party cookie, and Safari/iOS block
+  # those outright regardless of SameSite — same-origin is the only way the
+  # session survives a closed tab on every browser, not just Chrome.
+  origin {
+    domain_name = var.api_gateway_domain_name
+    origin_id   = "api-gateway"
+    origin_path = "/${var.api_gateway_stage}"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  ordered_cache_behavior {
+    path_pattern     = "/api/*"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "api-gateway"
+
+    forwarded_values {
+      query_string = true
+      headers      = ["*"]
+      cookies {
+        forward = "all"
+      }
+    }
+
+    viewer_protocol_policy = "https-only"
+    min_ttl                = 0
+    default_ttl            = 0
+    max_ttl                = 0
   }
 
   default_cache_behavior {

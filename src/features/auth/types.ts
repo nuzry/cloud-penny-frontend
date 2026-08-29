@@ -6,12 +6,13 @@ export interface CognitoConfig {
   scope: string;
 }
 
+// Shape returned by our own backend's /auth/callback and /auth/refresh —
+// the refresh token never leaves the backend (it lives only in the httpOnly
+// cp_refresh cookie), so it's deliberately absent here.
 export interface CognitoTokenResponse {
   access_token: string;
   id_token: string;
-  refresh_token: string;
-  token_type: string;
-  expires_in: number;
+  expires_in?: number;
 }
 
 export interface AuthUser {

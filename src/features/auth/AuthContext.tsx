@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { AuthUser } from './types';
-import { exchangeCodeForTokens, getCognitoLogoutUrl, parseJwt } from './api/cognito';
+import { exchangeCodeForTokens, refreshTokens, logoutBackend, getCognitoLogoutUrl, parseJwt } from './api/cognito';
+import { setTokens, clearTokens } from './tokenStore';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -9,7 +10,7 @@ interface AuthContextType {
   isLoading: boolean;
   loginWithCode: (code: string) => Promise<void>;
   logout: () => void;
-  /** Clears auth state locally WITHOUT triggering a Cognito/browser navigation. 
+  /** Clears auth state locally WITHOUT triggering a Cognito/browser navigation.
    *  Use this before async operations (e.g. delete account API) so the request
    *  isn't aborted mid-flight by the page redirect that `logout()` causes.
    */
@@ -26,29 +27,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if tokens exist in sessionStorage on mount
-    const accessToken = sessionStorage.getItem('access_token');
-    const idToken = sessionStorage.getItem('id_token');
-
-    if (accessToken && idToken) {
-      const parsedUser = parseJwt(idToken);
-      if (parsedUser) {
-        setUser(parsedUser);
-        setIsAuthenticated(true);
-      } else {
-        // Token might be invalid or expired
-        logoutLocally();
-      }
-    }
-    
-    // If there's an OAuth 'code' in the URL, the LandingPage will immediately
-    // call loginWithCode which sets isLoading to true. To prevent a UI flicker
-    // where it briefly shows the login screen before the exchange starts, 
-    // we keep isLoading true here if a code is present.
+    // If there's an OAuth 'code' in the URL, LandingPage will immediately
+    // call loginWithCode — let that own isLoading instead of racing it with
+    // the silent-refresh attempt below.
     const hasCode = new URLSearchParams(window.location.search).has('code');
-    if (!hasCode) {
-      setIsLoading(false);
-    }
+    if (hasCode) return;
+
+    // No tokens survive a closed tab (they're in-memory only), so on every
+    // fresh page load the only thing that can restore a session is the
+    // httpOnly refresh cookie — try it silently before showing the login
+    // screen. A missing/expired cookie just means "not logged in", not an
+    // error.
+    (async () => {
+      try {
+        const tokens = await refreshTokens();
+        setTokens(tokens);
+        const parsedUser = parseJwt(tokens.id_token);
+        if (parsedUser) {
+          setUser(parsedUser);
+          setIsAuthenticated(true);
+        }
+      } catch {
+        // No valid session to restore — this is the normal logged-out state.
+      } finally {
+        setIsLoading(false);
+      }
+    })();
   }, []);
 
   const loginWithCode = async (code: string) => {
@@ -56,12 +60,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setError(null);
     try {
       const tokens = await exchangeCodeForTokens(code);
-      
-      sessionStorage.setItem('access_token', tokens.access_token);
-      sessionStorage.setItem('id_token', tokens.id_token);
-      if (tokens.refresh_token) {
-        sessionStorage.setItem('refresh_token', tokens.refresh_token);
-      }
+      setTokens(tokens);
 
       const parsedUser = parseJwt(tokens.id_token);
       if (parsedUser) {
@@ -82,9 +81,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logoutLocally = () => {
-    sessionStorage.removeItem('access_token');
-    sessionStorage.removeItem('id_token');
-    sessionStorage.removeItem('refresh_token');
+    clearTokens();
     sessionStorage.removeItem('aws_connect_cached_profile');
     sessionStorage.removeItem('aws_connect_cached_verify');
     setUser(null);
@@ -93,7 +90,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = () => {
     logoutLocally();
-    window.location.assign(getCognitoLogoutUrl());
+    // Best-effort: revoke the refresh token + clear the cookie server-side.
+    // Bounded so a slow/unreachable backend can never trap the user on this
+    // page — they still need to reach Cognito's own /logout regardless.
+    const withTimeout = Promise.race([
+      logoutBackend(),
+      new Promise((resolve) => setTimeout(resolve, 1500)),
+    ]);
+    withTimeout
+      .catch(() => undefined)
+      .finally(() => window.location.assign(getCognitoLogoutUrl()));
   };
 
   return (
@@ -110,3 +116,4 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+

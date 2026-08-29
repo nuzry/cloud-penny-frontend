@@ -47,9 +47,9 @@ export const LandingPage: React.FC = () => {
     }
   }, [loginWithCode]);
 
-  const handleCognitoLogin = () => {
+  const handleCognitoLogin = async () => {
     setUrlError(null);
-    const loginUrl = getCognitoLoginUrl();
+    const loginUrl = await getCognitoLoginUrl();
     window.location.assign(loginUrl);
   };
 
