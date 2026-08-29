@@ -9,7 +9,7 @@ import ContactPage from '../pages/Contact';
 import AlertsPage from '../pages/Alerts';
 import { AuthProvider } from '../features/auth';
 import { ProtectedRoute } from '../features/auth';
-import AppLayout from '../components/layout/AppLayout';
+import { AppLayout } from '../components/layout/AppLayout';
 import { ThemeProvider, useTheme } from './providers';
 
 function InnerApp() {

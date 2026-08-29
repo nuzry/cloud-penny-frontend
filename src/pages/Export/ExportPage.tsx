@@ -7,7 +7,8 @@ import {
   DownloadOutlined, FileExcelOutlined, ClockCircleOutlined,
   CheckCircleOutlined, WarningOutlined, ReloadOutlined,
 } from '@ant-design/icons';
-import { useExportFiles, useClientMe } from '../../hooks/useQueries';
+import { useExportFiles } from '@/hooks/useDashboardQueries';
+import { useClientMe } from '@/hooks/useClientQueries';
 import PageHeader from '../../components/ui/PageHeader';
 import PageLoader from '../../components/ui/PageLoader';
 import { formatFileSize as fmtSize, formatDateTime as fmtDate } from '../../utils/format';

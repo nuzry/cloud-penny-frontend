@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, Typography, Alert, Button, theme, Space, Divider, Row, Col } from 'antd';
 import { CloudServerOutlined, IdcardOutlined, MailOutlined, SafetyCertificateOutlined, CalendarOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import { useClientMe } from '../../hooks/useQueries';
+import { useClientMe } from '@/hooks/useClientQueries';
 import PageLoader from '../../components/ui/PageLoader';
 import PageHeader from '../../components/ui/PageHeader';
 import { formatDate } from '../../utils/format';

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Steps, Button, Typography, Card, theme, Space, Alert, message, Input } from 'antd';
 import { CloudServerOutlined, LockOutlined, CheckCircleOutlined } from '@ant-design/icons';
-import { useAwsConnection, useSaveAwsConnection, useVerifyAwsConnection } from '../../hooks/useQueries';
+import { useAwsConnection, useSaveAwsConnection, useVerifyAwsConnection } from '@/hooks/useAwsConnectionQueries';
 import PageLoader from '../../components/ui/PageLoader';
 
 const { Title, Text } = Typography;
