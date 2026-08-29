@@ -1,4 +1,8 @@
 import type { CognitoConfig, CognitoTokenResponse, AuthUser } from '../types';
+import { generateCodeVerifier, generateCodeChallenge } from './pkce';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+const CODE_VERIFIER_KEY = 'pkce_code_verifier';
 
 export const getCognitoConfig = (): CognitoConfig => {
   let rawDomain =
@@ -23,15 +27,26 @@ export const getCognitoConfig = (): CognitoConfig => {
   };
 };
 
-export const getCognitoLoginUrl = (): string => {
+export const getCognitoLoginUrl = async (): Promise<string> => {
   const config = getCognitoConfig();
+
+  // The verifier has to survive a full-page navigation to Cognito's Hosted
+  // UI and back, so it's persisted here (sessionStorage, not tokenStore's
+  // in-memory closure, which a navigation would wipe) and read back once by
+  // exchangeCodeForTokens after the redirect returns.
+  const codeVerifier = generateCodeVerifier();
+  sessionStorage.setItem(CODE_VERIFIER_KEY, codeVerifier);
+  const codeChallenge = await generateCodeChallenge(codeVerifier);
+
   // Build manually to ensure scope spaces are encoded as %20 (not +)
   const url =
     `https://${config.domain}/oauth2/authorize` +
     `?client_id=${encodeURIComponent(config.clientId)}` +
     `&response_type=${encodeURIComponent(config.responseType)}` +
     `&scope=${config.scope.split(' ').map(encodeURIComponent).join('%20')}` +
-    `&redirect_uri=${encodeURIComponent(config.redirectUri)}`;
+    `&redirect_uri=${encodeURIComponent(config.redirectUri)}` +
+    `&code_challenge=${encodeURIComponent(codeChallenge)}` +
+    `&code_challenge_method=S256`;
   return url;
 };
 
@@ -44,57 +59,58 @@ export const getCognitoLogoutUrl = (): string => {
   );
 };
 
+// The actual Cognito token exchange now happens server-side (our backend
+// holds the refresh token in an httpOnly cookie the browser can never read)
+// — this just hands the code + verifier to our own API and gets back the
+// short-lived access/id tokens for in-memory use.
 export const exchangeCodeForTokens = async (code: string): Promise<CognitoTokenResponse> => {
   const config = getCognitoConfig();
-  const tokenEndpoint = `https://${config.domain}/oauth2/token`;
+  const codeVerifier = sessionStorage.getItem(CODE_VERIFIER_KEY);
+  if (!codeVerifier) {
+    throw new Error('Missing PKCE code verifier — the login attempt may have started in a different tab/session');
+  }
 
-  const params = new URLSearchParams({
-    grant_type: 'authorization_code',
-    client_id: config.clientId,
-    code: code,
-    redirect_uri: config.redirectUri,
-  });
-
-  const response = await fetch(tokenEndpoint, {
+  const response = await fetch(`${API_BASE}/v1/auth/callback`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: params.toString(),
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, code_verifier: codeVerifier, redirect_uri: config.redirectUri }),
   });
+
+  sessionStorage.removeItem(CODE_VERIFIER_KEY);
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Token exchange failed: ${errorText}`);
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(`Token exchange failed: ${errorBody.message || errorBody.error || response.status}`);
   }
 
   return response.json();
 };
 
-export const refreshTokens = async (refreshToken: string): Promise<CognitoTokenResponse> => {
-  const config = getCognitoConfig();
-  const tokenEndpoint = `https://${config.domain}/oauth2/token`;
-
-  const params = new URLSearchParams({
-    grant_type: 'refresh_token',
-    client_id: config.clientId,
-    refresh_token: refreshToken,
-  });
-
-  const response = await fetch(tokenEndpoint, {
+// No refresh token argument — it's the httpOnly cp_refresh cookie, sent
+// automatically by the browser via credentials:'include', that authorizes
+// this call. Used both for silent session restore on page load and for
+// renewing an expired access token.
+export const refreshTokens = async (): Promise<CognitoTokenResponse> => {
+  const response = await fetch(`${API_BASE}/v1/auth/refresh`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: params.toString(),
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Token refresh failed: ${errorText}`);
+    throw new Error(`Token refresh failed: ${response.status}`);
   }
 
   return response.json();
+};
+
+export const logoutBackend = async (): Promise<void> => {
+  await fetch(`${API_BASE}/v1/auth/logout`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+  });
 };
 
 export const parseJwt = (token: string): AuthUser | null => {
