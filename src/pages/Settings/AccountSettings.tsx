@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Typography, Flex, Button, Modal, Input, message, theme, Alert } from 'antd';
-import { useDeleteClientMe } from '../../hooks/useQueries';
+import { useDeleteClientMe } from '@/hooks/useClientQueries';
 import { useAuth } from '../../features/auth/AuthContext';
 import { getCognitoLogoutUrl } from '../../features/auth/api/cognito';
 

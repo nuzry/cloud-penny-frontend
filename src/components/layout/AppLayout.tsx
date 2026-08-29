@@ -198,5 +198,3 @@ export const AppLayout: React.FC = () => {
     </Layout>
   );
 };
-
-export default AppLayout;

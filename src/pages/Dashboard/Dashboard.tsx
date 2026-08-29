@@ -9,7 +9,8 @@ import {
 import { Column, Bar, Pie, Line } from '@ant-design/plots';
 import { useTheme } from '../../app/providers';
 import { useNavigate } from 'react-router-dom';
-import { useDashboardData, useClientMe } from '../../hooks/useQueries';
+import { useDashboardData } from '@/hooks/useDashboardQueries';
+import { useClientMe } from '@/hooks/useClientQueries';
 import PageHeader from '../../components/ui/PageHeader';
 import PageLoader from '../../components/ui/PageLoader';
 import { formatCurrency, formatCompactCurrency } from '../../utils/format';

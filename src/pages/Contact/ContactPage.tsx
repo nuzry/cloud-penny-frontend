@@ -13,8 +13,8 @@ import { formatRelativeTime, formatDateTime } from '../../utils/format';
 import {
   useSupportConversations, useConversationMessages, useCreateConversation,
   useSendSupportMessage, useResolveConversation,
-} from '../../hooks/useQueries';
-import type { SupportConversationSummary } from '../../hooks/useQueries';
+  type SupportConversationSummary,
+} from '@/hooks/useSupportChatQueries';
 
 const { Text } = Typography;
 

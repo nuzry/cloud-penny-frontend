@@ -1,8 +1,7 @@
 import React from 'react';
 import { Card, Flex, theme, Timeline, Tag, Space, Empty, Button, Divider, Typography } from 'antd';
 import { WarningOutlined, ReloadOutlined, ExperimentOutlined, RiseOutlined } from '@ant-design/icons';
-import { useAlerts } from '../../hooks/useQueries';
-import type { Alert } from '../../api/alertsService';
+import { useAlerts, type Alert } from '@/features/alerts';
 import PageHeader from '../../components/ui/PageHeader';
 import PageLoader from '../../components/ui/PageLoader';
 import { formatCurrency, formatRelativeTime } from '../../utils/format';

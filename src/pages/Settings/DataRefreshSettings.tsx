@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Typography, Button, message, Flex, Spin, Card, Select, theme } from 'antd';
-import { useClientMe, useUpdateClientMe } from '../../hooks/useQueries';
+import { useClientMe, useUpdateClientMe } from '@/hooks/useClientQueries';
 
 const { Title, Text } = Typography;
 
