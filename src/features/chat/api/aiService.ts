@@ -29,10 +29,18 @@ export const describeTools = (tools: string[]): string | null => {
   return labels.length ? `Checked ${labels.join(', ')}` : null;
 };
 
+export type ChatErrorKind = 'quota' | 'network';
+
 export class ChatError extends Error {
-  constructor(message: string, public readonly kind: 'quota' | 'network') {
+  // Assigned in the body rather than as a constructor parameter property:
+  // the app's tsconfig sets `erasableSyntaxOnly`, which rules out any
+  // TypeScript syntax that emits runtime code.
+  readonly kind: ChatErrorKind;
+
+  constructor(message: string, kind: ChatErrorKind) {
     super(message);
     this.name = 'ChatError';
+    this.kind = kind;
   }
 }
 
