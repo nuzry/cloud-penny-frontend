@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Card, Input, Button, List, Typography, Avatar, Flex, theme, Space } from 'antd';
 import { SendOutlined, CloseOutlined, UserOutlined, ExpandAltOutlined, ShrinkOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
-import { aiService, type ChatMessage } from '../api/aiService';
+import { aiService, describeTools, ChatError, type ChatMessage } from '../api/aiService';
 
 // Penny's replies are plain Markdown text (per the system prompt: bold for
 // numbers/names, bullet lists for breakdowns) — this used to render as a raw
@@ -32,6 +32,8 @@ interface Message {
   text: string;
   sender: 'user' | 'assistant';
   timestamp: Date;
+  /** Backend lookups behind this answer, shown as a provenance footnote. */
+  usedTools?: string[];
 }
 
 const CLOUD_COLOR = '#4f46e5'; // matches the app's colorPrimary — the same cloud mark used in the sidebar logo and landing page
@@ -122,18 +124,23 @@ export const ChatBotButton: React.FC = () => {
     setIsTyping(true);
 
     try {
-      const replyText = await aiService.sendMessage(text, currentHistory);
+      const { reply, usedTools } = await aiService.sendMessage(text, currentHistory);
       const newBotMsg: Message = {
         id: (Date.now() + 1).toString(),
-        text: replyText,
+        text: reply,
         sender: 'assistant',
-        timestamp: new Date()
+        timestamp: new Date(),
+        usedTools
       };
       setMessages(prev => [...prev, newBotMsg]);
     } catch (error) {
+      // Hitting the daily question limit is not a connection problem, and
+      // telling the user to "try again later" for it would be misleading.
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
-        text: "**Error:** I am having trouble connecting to the server. Please try again later.",
+        text: error instanceof ChatError
+          ? `**${error.kind === 'quota' ? 'Daily limit reached' : 'Connection problem'}:** ${error.message}`
+          : "**Error:** I am having trouble connecting to the server. Please try again later.",
         sender: 'assistant',
         timestamp: new Date()
       };
@@ -220,6 +227,14 @@ export const ChatBotButton: React.FC = () => {
                         boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
                       }}>
                         {isBot ? <MarkdownMessage text={msg.text} /> : msg.text}
+                        {isBot && msg.usedTools && msg.usedTools.length > 0 && (
+                          <Typography.Text
+                            type="secondary"
+                            style={{ fontSize: 11, display: 'block', marginTop: 6 }}
+                          >
+                            {describeTools(msg.usedTools)}
+                          </Typography.Text>
+                        )}
                       </div>
                     </Flex>
                   </div>
